@@ -1,0 +1,45 @@
+name: Bug report / 问题反馈
+description: Report a reproducible behavior, visual, or simulation problem / 提交可复现问题
+title: '[Bug] '
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Chinese or English is welcome. Include a minimal circuit for simulation issues.
+        可以使用中文或英文。仿真问题请提供最小接线方案；附件请移除个人信息。
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem / 问题描述
+      description: What went wrong? / 发生了什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      description: Include the example or terminal connections, power state, and order of button operations. / 写明示例或端子接线、通断电及按钮操作顺序。
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected and actual results / 预期与实际结果
+      description: For an electrical result, include the rule or reference supporting your expectation. / 电气结果问题请说明预期的依据。
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment / 运行环境
+      placeholder: OS, browser and version, app commit/tag; Node.js version for install issues
+    validations:
+      required: true
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Circuit, screenshots, or logs / 接线、截图或日志
+      description: Attach a sanitized project file or minimal terminal list, screenshots, and relevant errors. Only share materials you may publish. / 可附脱敏后的项目文件或端子列表及相关报错；只上传有权公开的资料。

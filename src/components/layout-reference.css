@@ -1,0 +1,47 @@
+.layout-reference > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+}
+
+.layout-reference > p {
+  margin: 12px 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.layout-reference summary {
+  width: fit-content;
+  padding: 6px 0;
+  color: var(--accent-text);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.layout-reference summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.layout-reference-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 16px 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.layout-reference-list dt {
+  color: var(--text-primary);
+}
+
+.layout-reference-list dd {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
