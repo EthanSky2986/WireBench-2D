@@ -1,0 +1,23 @@
+name: Feature request / 改进建议
+description: Describe a learning or workflow need / 描述教学或操作中的需求
+title: '[Feature] '
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Need or problem / 需求或问题
+      description: What are you trying to learn or do, and where does the current bench get in the way? / 你想完成什么实验或操作，目前遇到了什么困难？
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior / 建议的行为
+      description: Describe the result you want; alternatives and simple improvements are welcome. / 说明期望效果，也欢迎简单方案或替代做法。
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Examples and references / 示例与依据
+      description: For new devices or electrical behavior, include known terminal labels, parameters, and sources. Mark unknowns; only attach materials you may publish. / 新器件或电气行为请说明已知端子、参数与来源，未确认部分明确标记；只附有权公开的资料。

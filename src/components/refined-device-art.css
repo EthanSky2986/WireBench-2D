@@ -1,0 +1,85 @@
+.refined-device-art {
+  pointer-events: none;
+  --refined-transition: 120ms ease-out;
+}
+
+.refined-device-art .refined-silkscreen {
+  fill: #dce1e3;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 5.5px;
+  font-weight: 500;
+}
+
+.refined-device-art .refined-contact-number {
+  fill: #cad2d5;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 5.4px;
+}
+
+.refined-device-art .refined-device-id {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.refined-device-art .refined-lamp-light,
+.refined-device-art .refined-coil-window {
+  opacity: 0;
+  transition: opacity var(--refined-transition);
+}
+
+.refined-device-art.is-active .refined-lamp-light,
+.refined-device-art.is-active .refined-coil-window {
+  opacity: 1;
+}
+
+.refined-device-art .refined-coil-slide {
+  transform: translateY(12px);
+  transition: transform var(--refined-transition);
+}
+
+.refined-device-art.is-active .refined-coil-slide {
+  transform: translateY(0);
+}
+
+.refined-device-art .refined-button-cap {
+  transform: translateY(-2px);
+  transition: transform var(--refined-transition);
+}
+
+.refined-device-art.is-active .refined-button-cap {
+  transform: translateY(1px);
+}
+
+.refined-device-art .refined-button-recess {
+  opacity: 0.3;
+  transition: opacity var(--refined-transition);
+}
+
+.refined-device-art.is-active .refined-button-recess {
+  opacity: 0.9;
+}
+
+.refined-device-art .refined-limit-arm {
+  transform-origin: 80px 65px;
+  transform: rotate(-17deg);
+  transition: transform var(--refined-transition);
+}
+
+.refined-device-art.is-active .refined-limit-arm {
+  transform: rotate(31deg);
+}
+
+.refined-device-art .refined-estop-cap {
+  transform-origin: 80px 67px;
+  transform: translateY(0) scale(1);
+  transition: transform var(--refined-transition);
+}
+
+.refined-device-art.is-active .refined-estop-cap {
+  transform: translateY(7px) scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refined-device-art {
+    --refined-transition: 0ms;
+  }
+}
