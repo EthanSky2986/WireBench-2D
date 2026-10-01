@@ -9,6 +9,8 @@ export interface DeviceArtProps {
   id: string;
   active?: boolean;
   tripped?: boolean;
+  /** Lamp lens mounted in the bench's shared enclosure, without an individual faceplate. */
+  panelMounted?: boolean;
 }
 
 const mono = "'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace";

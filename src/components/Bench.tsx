@@ -5,6 +5,7 @@ import {
   BOARD,
   CONTROL_RAIL_Y,
   BUTTON_STRIPS,
+  LAMP_STRIPS,
   SOCKETS,
   SOCKET_MAP,
   placements,
@@ -21,6 +22,8 @@ import type { Wire } from '../sim/model';
 import type { SimulationResult } from '../sim/engine';
 import { RefinedDeviceArt } from './RefinedDeviceArt';
 import { TerminalStripArt } from './TerminalStripArt';
+import ThermalControls from './ThermalControls';
+import LampPanel from './LampPanel';
 import { useI18n } from '../i18n';
 import { findWireCandidates, nextWireCandidate } from '../rendering/wireSelection';
 import { fitView, resizeView, zoomView } from '../rendering/benchViewport';
@@ -425,16 +428,22 @@ export default function Bench(p: Props) {
                 </g>
               );
             })}
+          <LampPanel />
           {placements.map((part) => {
             const d = DEVICE_MAP[part.id],
               active =
                 d.kind === 'supply'
                   ? p.powered
                   : !!(p.result.coils[d.id] || p.result.lamps[d.id] || p.inputs[d.id]),
-              operable = ['button', 'limit', 'estop', 'thermal'].includes(d.kind);
+              operable = ['button', 'limit', 'estop'].includes(d.kind);
             return (
               <g key={d.id}>
-                <text x={part.labelX} y={part.labelY} textAnchor="middle" className="device-label">
+                <text
+                  x={part.labelX}
+                  y={part.labelY}
+                  textAnchor="middle"
+                  className={`device-label ${d.kind === 'lamp' ? 'lamp-panel-label' : ''}`}
+                >
                   {d.id === 'POWER'
                     ? t('bench.supplyLabel')
                     : d.id === 'MOTOR'
@@ -451,12 +460,16 @@ export default function Bench(p: Props) {
                   </tspan>
                 </text>
                 <g
-                  role="button"
-                  tabIndex={0}
-                  aria-label={t(operable ? 'bench.operateDevice' : 'bench.inspectDevice', {
-                    id: d.id,
-                    name: localizeDevice(d, locale),
-                  })}
+                  role={d.kind === 'thermal' ? undefined : 'button'}
+                  tabIndex={d.kind === 'thermal' ? undefined : 0}
+                  aria-label={
+                    d.kind === 'thermal'
+                      ? undefined
+                      : t(operable ? 'bench.operateDevice' : 'bench.inspectDevice', {
+                          id: d.id,
+                          name: localizeDevice(d, locale),
+                        })
+                  }
                   aria-pressed={operable ? !!p.inputs[d.id] : undefined}
                   className={`device-target ${p.selected === d.id ? 'selected' : ''}`}
                   transform={`translate(${part.x} ${part.y}) scale(${part.size / 160})`}
@@ -520,8 +533,47 @@ export default function Bench(p: Props) {
                     id={d.id}
                     active={active}
                     tripped={!!p.inputs[d.id]}
+                    panelMounted={d.kind === 'lamp'}
                   />
+                  {d.kind === 'thermal' && (
+                    <g
+                      role="button"
+                      tabIndex={0}
+                      className="thermal-inspect"
+                      aria-label={t('bench.inspectDevice', {
+                        id: d.id,
+                        name: localizeDevice(d, locale),
+                      })}
+                    >
+                      <title>
+                        {t('bench.inspectDevice', { id: d.id, name: localizeDevice(d, locale) })}
+                      </title>
+                      <rect x="26" y="48" width="47" height="70" rx="3" />
+                    </g>
+                  )}
                 </g>
+                {d.kind === 'thermal' && (
+                  <>
+                    <g transform={`translate(${part.x} ${part.y}) scale(${part.size / 160})`}>
+                      <ThermalControls
+                        id={d.id}
+                        tripped={!!p.inputs[d.id]}
+                        surface="canvas"
+                        blocked={!!p.pending || p.mode === 'pan' || space}
+                        onSelect={() => p.onSelect(d.id)}
+                        onOperate={p.onOperate}
+                      />
+                    </g>
+                    <text
+                      x={part.x + part.size / 2}
+                      y={part.y + part.size + 9}
+                      textAnchor="middle"
+                      className={`state-label ${active ? 'thermal-tripped' : ''}`}
+                    >
+                      {t(active ? 'inspector.tripped' : 'inspector.normal')}
+                    </text>
+                  </>
+                )}
                 {d.kind === 'contactor' && (
                   <g transform={`translate(${part.labelX - 40} ${part.y + part.size + 9})`}>
                     <circle
@@ -540,7 +592,7 @@ export default function Bench(p: Props) {
                     x={part.x + part.size / 2}
                     y={d.kind === 'limit' ? part.y + part.size + 65 : 867}
                     textAnchor="middle"
-                    className="board-subtitle"
+                    className={`board-subtitle ${d.kind === 'limit' ? 'limit-operation-hint' : ''}`}
                   >
                     {d.kind === 'button'
                       ? t('bench.hold')
@@ -553,11 +605,23 @@ export default function Bench(p: Props) {
             );
           })}
           {strips
-            .filter((s) => !BUTTON_STRIPS.includes(s))
+            .filter((s) => !BUTTON_STRIPS.includes(s) && !LAMP_STRIPS.includes(s))
             .map((s) => (
               <TerminalStripArt key={`${s.deviceId}-${s.side}`} strips={[s]} />
             ))}
           <TerminalStripArt strips={BUTTON_STRIPS} />
+          <TerminalStripArt strips={LAMP_STRIPS} />
+          {LAMP_STRIPS.map((s) => (
+            <text
+              key={s.deviceId}
+              x={s.x + (s.labels.length * s.step) / 2}
+              y={s.y - 7}
+              textAnchor="middle"
+              className="board-label"
+            >
+              {s.deviceId}
+            </text>
+          ))}
           {/* Keep interactive groups in document order so selecting never moves focus. */}
           {wireGeometry.map((w) => {
             const points = w.points,

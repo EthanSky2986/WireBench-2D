@@ -6,7 +6,7 @@ A two-dimensional electrical training bench in your browser. Device leads are al
 
 **First open-source teaching preview: [v0.1.0-alpha](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.1.0-alpha).** Code uses the MIT license; the public repository excludes original reference images. The current model supports basic control-circuit practice; it does not calculate physical voltage, current, or motor motion.
 
-![Refined workbench: protection test in English, light theme](docs/screenshots/refined-bench-light-trip.jpg)
+![Refined workbench: protection test in English, light theme](docs/screenshots/lamp-panel-light-trip.png)
 
 ## Features
 
@@ -38,7 +38,7 @@ On macOS, you can also double-click **启动实验台.command**. If macOS does n
 2. Select **Power on**. The amber lamp indicates standby.
 3. Press and release **SB2**: **KM1** energizes and holds; the green lamp stays on.
 4. Press **SB1** to stop, or click **E-STOP** to latch the emergency stop. Click it again to reset; resetting alone does not restart the circuit.
-5. Start again, then click **FR1** to test a trip: the contactor releases and the red lamp lights. Click FR1 again to reset.
+5. Start again, then click **FR1’s TEST** to test a trip: the contactor releases and the red lamp lights. Click **RESET** to reset it; clicking the relay body only shows its details.
 6. Select **Exit experiment** to restore the workspace you had before entering the example.
 
 Examples contain ordinary wire data rather than preset simulation results. Turn off power, remove a necessary wire, and power on again: the result changes with the actual circuit.
@@ -55,7 +55,8 @@ Examples contain ordinary wire data rather than preset simulation results. Turn 
 | Undo / redo                | Toolbar, ⌘/Ctrl+Z, or ⌘/Ctrl+Shift+Z                                                                                                                             |
 | Zoom / pan                 | Scroll to zoom; hold Space and drag, use the middle mouse button, or select the pan tool; **Fit bench to view** restores automatic fitting                       |
 | Momentary pushbutton       | Hold to activate and release to reset; focused buttons also support Space/Enter                                                                                  |
-| SQ, emergency stop, FR     | Click to activate, click again to reset                                                                                                                          |
+| SQ, emergency stop         | Click to activate, click again to reset                                                                                                                          |
+| FR overload relay          | Body opens details; TEST trips, RESET resets. Current adjustment is not simulated.                                                                               |
 | Reset operating state      | **Reset → Reset operating state** beside power; powers off and resets inputs and faults, retaining wiring and history                                            |
 | Clear wiring               | **Reset → Clear all wiring**, then confirm; keeps the name and current exercise and can be undone                                                                |
 | Exit an example            | Select **Exit experiment**, click the selected example again, or choose **My workspace**                                                                         |
@@ -103,6 +104,7 @@ npm run preview      # Preview the existing production build; use the printed ad
 Reports should include the browser, reproduction steps, expected behavior, and actual behavior. Attach a `.wirebench.json` with personal information removed if needed. Please use [Issues](https://github.com/EthanSky2986/WireBench-2D/issues).
 
 - [Contributing](CONTRIBUTING.md)
+- [Quality improvement plan](docs/QUALITY_PLAN.md)
 - [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Detailed development conventions](docs/CONTRIBUTING.md) · [Internationalization](docs/INTERNATIONALIZATION.md)
 - [Verification record](docs/VERIFICATION.md) · [Open-source readiness](docs/OPEN_SOURCE_READINESS.md) · [Project constraints](AGENTS.md)

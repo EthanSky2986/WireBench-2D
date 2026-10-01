@@ -787,6 +787,9 @@ p {
   font-size: 13px;
   fill: var(--board-text-muted);
 }
+.board-subtitle.limit-operation-hint {
+  font-size: 11px;
+}
 .board-label {
   font-size: 14px;
   fill: var(--board-text-primary);
@@ -808,12 +811,55 @@ p {
   fill: var(--board-text-muted);
   font-weight: 400;
 }
+.device-label.lamp-panel-label {
+  fill: var(--lamp-panel-ink);
+}
 .state-label {
   font-size: 12px;
   fill: var(--board-text-muted);
 }
 .state-label.on {
   fill: var(--accent-text);
+}
+.state-label.thermal-tripped {
+  fill: var(--danger);
+  font-weight: 600;
+}
+.thermal-control,
+.thermal-inspect {
+  cursor: pointer;
+}
+.thermal-control > rect,
+.thermal-inspect > rect {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 1.5;
+}
+.thermal-control:hover > rect,
+.thermal-control:focus-visible > rect,
+.thermal-inspect:focus-visible > rect {
+  stroke: var(--accent-text);
+}
+.thermal-control:focus-visible,
+.thermal-inspect:focus-visible {
+  outline: none;
+}
+.thermal-control[aria-disabled='true'] {
+  cursor: default;
+}
+.bench-svg.is-pan .thermal-control {
+  cursor: grab;
+}
+.bench-svg.is-wiring:not(.is-pan) .thermal-control {
+  cursor: crosshair;
+}
+.thermal-actions {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+.thermal-actions .button {
+  width: 100%;
 }
 .terminal-label {
   font-size: 12px;
@@ -1183,6 +1229,13 @@ p {
 }
 .device-status.active > i {
   background: var(--accent);
+}
+.device-status.thermal-tripped {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.device-status.thermal-tripped > i {
+  background: var(--danger);
 }
 .inspector-content {
   padding: 17px 19px 20px;
