@@ -74,7 +74,7 @@ function Screw({
  * The enclosing device owns interaction, accessible labels and electrical state.
  */
 export function RefinedDeviceArt(props: DeviceArtProps) {
-  const { kind, id, active = false, tripped = false } = props;
+  const { kind, id, active = false, tripped = false, panelMounted = false } = props;
   const { locale, t } = useI18n();
   const uid = `refined-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const fill = (name: string) => `url(#${uid}-${name})`;
@@ -666,33 +666,37 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
 
       {(kind === 'button' || kind === 'lamp') && (
         <g>
-          <rect x="16" y="12" width="132" height="136" rx="7" fill="#283238" opacity="0.09" />
-          <rect
-            x="14"
-            y="9"
-            width="132"
-            height="136"
-            rx="6"
-            fill={fill('plate')}
-            stroke="#a5afb0"
-            strokeWidth="1"
-          />
-          <path
-            d="M 21 10 H 139 Q 145 10 145 16 M 15 18 V 138"
-            fill="none"
-            stroke="#fff"
-            strokeWidth="1"
-            opacity="0.9"
-          />
-          <path
-            d="M 17 142 H 138 Q 144 142 145 136"
-            fill="none"
-            stroke="#949fa2"
-            strokeWidth="1"
-            opacity="0.6"
-          />
-          <Screw x={25} y={21} radius={2.9} metal={fill('metal')} />
-          <Screw x={135} y={133} radius={2.9} metal={fill('metal')} />
+          {!panelMounted && (
+            <>
+              <rect x="16" y="12" width="132" height="136" rx="7" fill="#283238" opacity="0.09" />
+              <rect
+                x="14"
+                y="9"
+                width="132"
+                height="136"
+                rx="6"
+                fill={fill('plate')}
+                stroke="#a5afb0"
+                strokeWidth="1"
+              />
+              <path
+                d="M 21 10 H 139 Q 145 10 145 16 M 15 18 V 138"
+                fill="none"
+                stroke="#fff"
+                strokeWidth="1"
+                opacity="0.9"
+              />
+              <path
+                d="M 17 142 H 138 Q 144 142 145 136"
+                fill="none"
+                stroke="#949fa2"
+                strokeWidth="1"
+                opacity="0.6"
+              />
+              <Screw x={25} y={21} radius={2.9} metal={fill('metal')} />
+              <Screw x={135} y={133} radius={2.9} metal={fill('metal')} />
+            </>
+          )}
           <ellipse cx="81" cy="76" rx="44" ry="43" fill="#1c2a31" opacity="0.1" />
           {kind === 'lamp' && (
             <circle className="refined-lamp-light" cx="80" cy="71" r="65" fill={fill('halo')} />
@@ -811,18 +815,20 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
               />
             </g>
           )}
-          <text
-            x="80"
-            y="130"
-            textAnchor="middle"
-            fill="#48555b"
-            fontSize="12"
-            fontWeight="650"
-            letterSpacing="0.8"
-            className="refined-device-id"
-          >
-            {id}
-          </text>
+          {!panelMounted && (
+            <text
+              x="80"
+              y="130"
+              textAnchor="middle"
+              fill="#48555b"
+              fontSize="12"
+              fontWeight="650"
+              letterSpacing="0.8"
+              className="refined-device-id"
+            >
+              {id}
+            </text>
+          )}
         </g>
       )}
     </g>

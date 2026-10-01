@@ -32,6 +32,9 @@
   --board-border: #b9c4bb;
   --board-pattern: #d3d8d4;
   --board-panel-bg: #dce3d8;
+  --lamp-panel-top: #f2f4f1;
+  --lamp-panel-bottom: #ccd4d1;
+  --lamp-panel-ink: #40524c;
   --board-text-primary: #60725d;
   --board-text-secondary: #798777;
   --board-text-muted: #75816f;
@@ -48,6 +51,9 @@
 }
 
 :root[data-theme='dark'] {
+  --lamp-panel-top: #d8e0e2;
+  --lamp-panel-bottom: #aab9bf;
+  --lamp-panel-ink: #263b45;
   color-scheme: dark;
   --page-bg: #151d22;
   --surface: #1c262c;

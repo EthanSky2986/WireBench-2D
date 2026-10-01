@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { RefinedDeviceArt } from './RefinedDeviceArt';
+import ThermalControls from './ThermalControls';
 import ColorPicker from './ColorPicker';
 import { CONTACTS, DEVICE_MAP } from '../sim/model';
 import type { Wire } from '../sim/model';
@@ -117,10 +118,13 @@ export default function Inspector({
                   id={device.id}
                   active={active}
                   tripped={!!inputs[device.id]}
+                  panelMounted={device.kind === 'lamp'}
                 />
               </g>
             </svg>
-            <span className={`device-status ${active ? 'active' : ''}`}>
+            <span
+              className={`device-status ${active ? (device.kind === 'thermal' ? 'thermal-tripped' : 'active') : ''}`}
+            >
               <i />
               {device.kind === 'contactor'
                 ? active
@@ -151,7 +155,15 @@ export default function Inspector({
               <span>{t('inspector.terminalCount', { count: device.terminals.length })}</span>
             </div>
             <p className="device-description">{deviceName}</p>
-            {['button', 'limit', 'estop', 'thermal'].includes(device.kind) && (
+            {device.kind === 'thermal' && (
+              <ThermalControls
+                id={device.id}
+                tripped={active}
+                surface="inspector"
+                onOperate={onOperate}
+              />
+            )}
+            {['button', 'limit', 'estop'].includes(device.kind) && (
               <button
                 className={`button operate full ${active ? 'pressed' : ''}`}
                 aria-label={t('inspector.operate', { id: device.id })}
@@ -193,13 +205,9 @@ export default function Inspector({
                   ? active
                     ? t('inspector.releaseAction')
                     : t('inspector.holdAction')
-                  : device.kind === 'thermal'
-                    ? active
-                      ? t('inspector.resetThermal')
-                      : t('inspector.testThermal')
-                    : active
-                      ? t('inspector.resetAction')
-                      : t('inspector.triggerAction')}
+                  : active
+                    ? t('inspector.resetAction')
+                    : t('inspector.triggerAction')}
               </button>
             )}
             {device.kind === 'contactor' && (

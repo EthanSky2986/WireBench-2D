@@ -30,6 +30,7 @@ export interface Socket extends Point {
 }
 export const BOARD = { width: 1400, height: 930 };
 export const CONTROL_RAIL_Y = 714;
+export const LAMP_PANEL = { x: 1170, y: 215, width: 170, height: 252 };
 export const strips: Strip[] = [];
 export const placements: Placement[] = [];
 function strip(
@@ -58,9 +59,9 @@ for (let n = 1; n <= 2; n++) {
 }
 for (let n = 1; n <= 3; n++) {
   const id = `HL${n}`,
-    y = 256 + (n - 1) * 101;
-  strip(id, ['1', '2'], 1282, y + 15, 'top', 26);
-  placements.push({ id, x: 1172, y, size: 93, labelX: 1218, labelY: y + 94 });
+    y = 228 + (n - 1) * 79;
+  strip(id, [...DEVICE_MAP[id].terminals], 1176 + (n - 1) * 52, 489, 'bottom', 26);
+  placements.push({ id, x: 1235, y, size: 90, labelX: 1212, labelY: y + 44 });
 }
 strip('POWER', ['U2', 'V2', 'W2', 'L', 'N'], 583, 70, 'bottom', 42);
 placements.push({ id: 'POWER', x: 455, y: 34, size: 111, labelX: 688, labelY: 45 });
@@ -81,35 +82,42 @@ for (let n = 1; n <= 2; n++) {
   });
 }
 let buttonStripX = 656;
+// A shared pitch leaves room for the narrower two-terminal emergency-stop group.
+// Derive device centers from their terminal groups so future label changes cannot offset them.
+const BUTTON_TERMINAL_PITCH = 40;
 for (let n = 1; n <= 3; n++) {
   const id = `SB${n}`,
     labels = DEVICE_MAP[id].terminals,
-    bodyX = 665 + (n - 1) * 179,
-    width = labels.length * 29;
-  strip(id, [...labels], buttonStripX, 644, 'top', 29);
+    width = labels.length * BUTTON_TERMINAL_PITCH,
+    centerX = buttonStripX + width / 2;
+  strip(id, [...labels], buttonStripX, 644, 'top', BUTTON_TERMINAL_PITCH);
   placements.push({
     id,
-    x: bodyX,
+    x: centerX - 103 / 2,
     y: 736,
     size: 103,
-    labelX: buttonStripX + width / 2,
+    labelX: centerX,
     labelY: 622,
   });
   buttonStripX += width;
 }
-strip('ESTOP', [...DEVICE_MAP.ESTOP.terminals], buttonStripX, 644, 'top', 29);
+const emergencyCenterX =
+  buttonStripX + (DEVICE_MAP.ESTOP.terminals.length * BUTTON_TERMINAL_PITCH) / 2;
+strip('ESTOP', [...DEVICE_MAP.ESTOP.terminals], buttonStripX, 644, 'top', BUTTON_TERMINAL_PITCH);
 placements.push({
   id: 'ESTOP',
-  x: 1187,
+  x: emergencyCenterX - 111 / 2,
   y: 734,
   size: 111,
-  labelX: buttonStripX + 29,
+  labelX: emergencyCenterX,
   labelY: 622,
 });
 /** One physical terminal bank, with electrically independent SB and emergency-stop groups. */
 export const BUTTON_STRIPS = strips.filter((s) =>
   ['button', 'estop'].includes(DEVICE_MAP[s.deviceId].kind),
 );
+/** Three independent lamps share one enclosure and one six-position terminal bank. */
+export const LAMP_STRIPS = strips.filter((s) => DEVICE_MAP[s.deviceId].kind === 'lamp');
 export const SOCKETS: Socket[] = strips.flatMap((s) =>
   s.labels.map((label, i) => ({
     id: `${s.deviceId}:${label}`,
@@ -132,15 +140,15 @@ export function fixedLeadPath(s: Strip, part: Placement, index: number): string 
     // Only the short entry into the lower duct is exposed; the route to the SQ body stays concealed.
     return `M${sx} ${sy} V${CONTROL_RAIL_Y + 1}`;
   }
+  if (DEVICE_MAP[s.deviceId].kind === 'lamp') {
+    // Leads emerge below the shared enclosure; lamp connections inside it are concealed.
+    return `M${sx} ${sy} V${LAMP_PANEL.y + LAMP_PANEL.height}`;
+  }
   let tx = part.x + 18 + fraction * (part.size - 36),
     ty = part.y + (s.side === 'top' ? 13 : part.size - 9);
   if (s.deviceId === 'POWER') {
     tx = part.x + 100;
     ty = part.y + 70;
-  }
-  if (s.deviceId.startsWith('HL')) {
-    tx = part.x + 80;
-    ty = part.y + 35 + index * 15;
   }
   return `M${sx} ${sy} C${sx} ${(sy + ty) / 2} ${tx} ${(sy + ty) / 2} ${tx} ${ty}`;
 }

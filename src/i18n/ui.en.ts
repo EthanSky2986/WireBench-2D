@@ -133,7 +133,7 @@ export const en = {
     'Use the green power button to start the simulation. Turn off power before editing wires.',
   'ui.guide.operateTitle': 'Operate and observe',
   'ui.guide.operateDescription':
-    'Hold an SB button to operate it; release to reset. Click the emergency stop, a limit switch, or an overload relay to activate it; click again to reset.',
+    'Hold an SB button to operate it; release to reset. Click the emergency stop or a limit switch to activate it; click again to reset. Use TEST to trip an overload relay and RESET to reset it; click its body for details.',
   'ui.guide.suggestion': 'Start with “Button & lamp”',
   'ui.guide.suggestionDescription':
     'Open an example, switch on power, and hold SB2. Exiting restores your original workspace; export practice wiring to keep it.',
