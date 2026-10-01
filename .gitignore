@@ -6,3 +6,10 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Maintainer-only notes stay local and are not part of public source archives.
+/AGENTS.md
+/PROJECT_PLAN.md
+/docs/QUALITY_PLAN.md
+/docs/VERIFICATION.md
+/docs/OPEN_SOURCE_READINESS.md
