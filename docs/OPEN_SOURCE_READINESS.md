@@ -62,4 +62,4 @@ Then enter the printed candidate directory, run `npm ci` and `npm run check`, an
 
 An independent student/teacher trial and a real export/reimport round trip remain unverified. This alpha prerelease invites feedback with those limits stated explicitly; it is not a classroom-validated stable release.
 
-后续参考资料继续只在本机核对：2026-10-01 灯面板补图的三个指纹已加入排除清单，当前共 26 个指纹。新截图由程序界面生成，原始补图不进入仓库。
+后续参考资料继续只在本机核对：2026-10-01 灯面板补图的三个指纹已加入排除清单，加上界面调整参考截图，当前共 28 个指纹。新截图由程序界面生成，原始补图不进入仓库。

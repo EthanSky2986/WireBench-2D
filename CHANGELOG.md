@@ -2,12 +2,14 @@
 
 ## Unreleased / 尚未发布新版本
 
+- 将“接线实验台”标题移至顶部品牌栏，移除重复的大标题区，为普通视图增加画布高度。1280×720 窗口实测增加 101 像素；全屏入口保留。
+
 - 按补充资料将 HL1–HL3 合并到竖向共用灯面板，下方连续六位端子依次对应各灯的 1、2 端子，固定引出线保留。原端子 ID、存档格式和灯回路逻辑不变。
 - SB1–SB3、急停与各自端子组上下对齐；保留连续 14 位端子排。
 - FR 本体只查看详情，画布与详情均提供独立 TEST/RESET；区分正常和跳闸，布线/平移经过按钮不触发操作。旋钮和真实热保护仍明确为未模拟。
 - 缩短 SQ 提示占用的宽度，避免英文说明相互重叠；更新操作指南与质量改进顺序。
 
-English: Shared three-lamp enclosure with a six-position terminal bank; aligned SB controls; independent FR inspection, TEST and RESET with routing protection; clearer trip status and non-overlapping SQ hints. Electrical IDs and the v1 exchange format are unchanged. Real thermal/current behavior and project management remain future work.
+English: Compact header with more vertical canvas space; shared three-lamp enclosure with a six-position terminal bank; aligned SB controls; independent FR inspection, TEST and RESET with routing protection; clearer trip status and non-overlapping SQ hints. Electrical IDs and the v1 exchange format are unchanged. Real thermal/current behavior and project management remain future work.
 
 ## v0.1.0-alpha — 2026-10-01
 
