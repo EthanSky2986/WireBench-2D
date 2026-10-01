@@ -410,7 +410,7 @@ export default function App() {
             <CircuitBoard size={23} />
           </div>
           <div>
-            WireBench<span>{t('ui.brand.subtitle')}</span>
+            WireBench<h1>{t('ui.sidebar.workbench')}</h1>
           </div>
           <span className="version">v{APP_VERSION}</span>
         </a>
@@ -582,17 +582,6 @@ export default function App() {
           </div>
         </aside>
         <main className="work-area">
-          <div className="workspace-heading">
-            <div>
-              <div className="eyebrow">ELECTRICAL CONTROL LAB</div>
-              <h1>{t('ui.sidebar.workbench')}</h1>
-              <p>{t('ui.heading.tagline')}</p>
-            </div>
-            <div className="bench-badge">
-              <span /> {powered ? t('ui.heading.running') : t('ui.heading.editing')}
-              <i /> {t('ui.heading.sketch')}
-            </div>
-          </div>
           {activeExample && (
             <div className="example-session">
               <div>
