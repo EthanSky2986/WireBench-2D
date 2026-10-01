@@ -201,12 +201,13 @@ export async function createPublicCandidate(sourceDirectory, temporaryDirectory 
     }
     const after = await scanFiles(candidateDirectory, files, excludedHashes);
 
+    // Use a reserved domain: a generic GitHub noreply address can belong to a real user.
     // The candidate's Git history begins only after all export checks have passed.
     const commitEnvironment = {
       GIT_AUTHOR_NAME: 'WireBench contributors',
-      GIT_AUTHOR_EMAIL: 'noreply@users.noreply.github.com',
+      GIT_AUTHOR_EMAIL: 'snapshot@wirebench.invalid',
       GIT_COMMITTER_NAME: 'WireBench contributors',
-      GIT_COMMITTER_EMAIL: 'noreply@users.noreply.github.com',
+      GIT_COMMITTER_EMAIL: 'snapshot@wirebench.invalid',
       GIT_AUTHOR_DATE: sourceDate,
       GIT_COMMITTER_DATE: sourceDate,
     };

@@ -146,7 +146,10 @@ describe('public snapshot export', { timeout: 30_000 }, () => {
     expect(git(['remote'], candidate)).toBe('');
     expect(git(['branch', '--show-current'], candidate)).toBe('main');
     expect(git(['log', '-1', '--format=%an <%ae>'], candidate)).toBe(
-      'WireBench contributors <noreply@users.noreply.github.com>',
+      'WireBench contributors <snapshot@wirebench.invalid>',
+    );
+    expect(git(['log', '-1', '--format=%cn <%ce>'], candidate)).toBe(
+      'WireBench contributors <snapshot@wirebench.invalid>',
     );
     expect(await readFile(path.join(candidate, 'docs/screenshots/main.jpg'))).toEqual(cleanJpeg);
     expect(await readFile(path.join(source, 'docs/screenshots/main.jpg'))).toEqual(metadataJpeg);
