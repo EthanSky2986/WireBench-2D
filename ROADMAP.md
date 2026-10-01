@@ -4,6 +4,10 @@
 
 This roadmap orders priorities rather than promising dates. See the [changelog](CHANGELOG.md) for implemented work and [open-source readiness](docs/OPEN_SOURCE_READINESS.md) for release checks.
 
+近期执行顺序与完成标准见[质量改进计划](docs/QUALITY_PLAN.md)。先修正当前器件与交互，再独立完成本地项目管理及存档验收，随后扩展教学功能。
+
+Near-term order and acceptance criteria are tracked in the [quality plan](docs/QUALITY_PLAN.md): device corrections, safe local project management, then teaching extensions.
+
 ## Alpha validation / Alpha 试用与验收
 
 目标：让第一次接触项目的人能够独立启动，完成三种基础实验，知道模型的适用范围，并能提供可复现反馈。

@@ -92,6 +92,9 @@ export const en = {
   'inspector.holdAction': 'Press and hold',
   'inspector.resetThermal': 'RESET · Reset relay',
   'inspector.testThermal': 'TEST · Trip relay',
+  'thermal.test': '{id} trip test',
+  'thermal.reset': '{id} reset',
+  'thermal.controls': '{id} overload relay controls',
   'inspector.resetAction': 'Click to reset',
   'inspector.triggerAction': 'Click to actuate',
   'inspector.coil': 'Coil A1 / A2',
@@ -107,7 +110,7 @@ export const en = {
   'inspector.lampHint':
     'Connect terminals 1 and 2 to the supply circuit. The actual wiring determines whether the lamp lights.',
   'inspector.thermalHint':
-    'TEST switches the auxiliary contacts while the main paths remain closed. Thermal trip timing is not simulated.',
+    'TEST trips the relay; RESET manually resets it. A trip opens 95–96 and closes 97–98 while the main paths remain closed. Current settings and thermal delays are not simulated; the dial is decorative.',
   'inspector.estopHint':
     'The emergency stop only affects circuits wired through its normally closed contact. Reset restores that contact.',
   'inspector.motorHint':
