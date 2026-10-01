@@ -130,7 +130,9 @@ async function fixture() {
   return { source, output };
 }
 
-describe('public snapshot export', () => {
+// Real Git/tar subprocesses can exceed the default 5s on Windows CI.
+// Scope the allowance to export integration tests; pure unit tests keep their default.
+describe('public snapshot export', { timeout: 30_000 }, () => {
   it('creates a deterministic clean single-commit candidate with no private history or remote', async () => {
     const { source, output } = await fixture();
     git(['remote', 'add', 'origin', 'https://example.invalid/private'], source);
