@@ -124,7 +124,7 @@ export const zh = {
   'ui.guide.powerDescription': '点击绿色电源按钮进入运行状态。要改线，先断开电源。',
   'ui.guide.operateTitle': '操作并观察',
   'ui.guide.operateDescription':
-    '按住 SB 按钮，松开复位。急停、行程开关和热继电器点击触发，再次点击恢复。',
+    '按住 SB 按钮，松开复位。急停、行程开关点击触发，再次点击恢复。热继电器用 TEST 测试跳闸、RESET 复位，点击本体查看详情。',
   'ui.guide.suggestion': '建议从「按钮点灯」开始',
   'ui.guide.suggestionDescription':
     '打开左侧示例，接通电源，再按住 SB2。退出实验会恢复原方案；练习结果可导出保留。',

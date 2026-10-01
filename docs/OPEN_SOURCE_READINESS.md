@@ -25,7 +25,7 @@ npm run prepare:public
 脚本返回发布副本的绝对路径、来源提交、候选提交、扫描数量与截图元数据处理结果。它会：
 
 1. 从明确的 `HEAD` 导出跟踪文件，不复制 `.git`、本地依赖或未提交内容。
-2. 拒绝符号链接、子模块与原始图片路径，使用 23 个已排除文件的 SHA-256 指纹识别改名副本。指纹不能用于恢复原图片；任意重新编码的衍生图仍需人工检查。
+2. 拒绝符号链接、子模块与原始图片路径，使用排除清单中的 SHA-256 指纹识别改名副本。指纹不能用于恢复原图片；任意重新编码的衍生图仍需人工检查。
 3. 对副本中的程序截图去除 EXIF/XMP、Photoshop/IPTC 与注释段，保留 JPEG 像素压缩数据与 ICC 色彩信息。
 4. 再次检查文件，随后初始化只有一个提交的 `main`，使用通用作者身份，不添加远程地址。
 5. 不删除或改写来源仓库及其历史，不执行推送或公开操作。
@@ -61,3 +61,5 @@ Then enter the printed candidate directory, run `npm ci` and `npm run check`, an
 本次以明确标注边界的 Alpha 预发布开放反馈，不将上述人工试用写成通过。应用采用逻辑通断模型；不是完成课堂验收的稳定版。
 
 An independent student/teacher trial and a real export/reimport round trip remain unverified. This alpha prerelease invites feedback with those limits stated explicitly; it is not a classroom-validated stable release.
+
+后续参考资料继续只在本机核对：2026-10-01 灯面板补图的三个指纹已加入排除清单，加上界面调整参考截图，当前共 28 个指纹。新截图由程序界面生成，原始补图不进入仓库。
