@@ -15,8 +15,8 @@ Dependency versions are recorded in `package-lock.json`. When updating a runtime
 
 ## Reference materials / 原始资料
 
-User-supplied photographs, product images, sketches, rotated copies and their public-asset duplicate are excluded from the public snapshot. Their presence in earlier private commits does not grant permission to redistribute them. Publish from the checked, fresh-history candidate described in [Open-source readiness](docs/OPEN_SOURCE_READINESS.md), rather than changing the old private repository's visibility.
+User-supplied photographs, product images, sketches, and their copies are not distributed with public releases and are not covered by this project's MIT license. Repository screenshots show the application itself; the terminal-layout reference is generated from the current model and layout code.
 
-用户提供的照片、产品图、手绘图及其副本不随公开版本发布。旧私有历史中的资料也不因此获得再分发许可。公开仓库使用经过检查的新历史副本。仓库保留的界面截图由程序生成；端子布局说明由当前模型和布局代码绘制。
+用户提供的照片、产品图、手绘图及其副本不随公开版本发布，也不在本项目 MIT 许可的授权范围内。仓库保留的截图来自应用自身界面；端子布局说明由当前模型和布局代码绘制。
 
 Device and product identifiers describe the educational reference configuration. They do not imply endorsement by any manufacturer or grant trademark rights.
