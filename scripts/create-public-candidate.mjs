@@ -7,6 +7,13 @@ import { fileURLToPath } from 'node:url';
 
 const manifestPath = 'scripts/excluded-assets.json';
 const imageExtension = /\.(?:avif|bmp|gif|heic|heif|jpe?g|png|svg|tiff?|webp)$/i;
+const internalDocumentPaths = new Set([
+  'agents.md',
+  'project_plan.md',
+  'docs/quality_plan.md',
+  'docs/verification.md',
+  'docs/open_source_readiness.md',
+]);
 
 function run(command, args, cwd, env) {
   return execFileSync(command, args, {
@@ -44,6 +51,10 @@ export function isExcludedAssetPath(relativePath) {
     normalized === 'public/reference-bench.jpg' ||
     (normalized.startsWith('docs/references/') && imageExtension.test(normalized))
   );
+}
+
+export function isInternalDocumentPath(relativePath) {
+  return internalDocumentPaths.has(relativePath.replaceAll('\\', '/').toLowerCase());
 }
 
 /** Remove EXIF/XMP, IPTC/Photoshop and comments without re-encoding JPEG scan data. */
@@ -121,11 +132,15 @@ async function scanFiles(directory, files, excludedHashes) {
   const rejected = [];
   for (const relativePath of files) {
     const bytes = await readFile(path.join(directory, relativePath));
-    if (isExcludedAssetPath(relativePath) || excludedHashes.has(sha256(bytes))) {
+    if (
+      isExcludedAssetPath(relativePath) ||
+      isInternalDocumentPath(relativePath) ||
+      excludedHashes.has(sha256(bytes))
+    ) {
       rejected.push(relativePath);
     }
   }
-  if (rejected.length) throw new Error(`Excluded reference assets found:\n${rejected.join('\n')}`);
+  if (rejected.length) throw new Error(`Excluded public files found:\n${rejected.join('\n')}`);
   return { filesScanned: files.length, excludedHashes: excludedHashes.size, rejectedFiles: 0 };
 }
 

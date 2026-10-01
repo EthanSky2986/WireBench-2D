@@ -4,22 +4,24 @@
 
 A two-dimensional electrical training bench in your browser. Device leads are already connected to terminal strips. Draw wires between terminals, operate buttons and switches, and watch contactors and indicator lamps respond to the circuit you build.
 
-**First open-source teaching preview: [v0.1.0-alpha](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.1.0-alpha).** Code uses the MIT license; the public repository excludes original reference images. The current model supports basic control-circuit practice; it does not calculate physical voltage, current, or motor motion.
+**Open-source teaching preview: [v0.1.1-alpha](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.1.1-alpha) (2026-10-01).** Code uses the MIT license; the public repository excludes original reference images. The current model supports basic control-circuit practice; it does not calculate physical voltage, current, or motor motion.
 
 ![Refined workbench: protection test in English, light theme](docs/screenshots/lamp-panel-light-trip.png)
 
 ## Features
 
-- 16 device definitions and 113 selectable terminals; refined artwork throughout the main bench and device inspector.
+- 16 device definitions and 113 selectable terminals; refined artwork throughout the main bench and device inspector. Three lamps share a vertical panel and six-position terminal bank; SB controls align with their terminal groups.
 - Three editable examples: button-controlled lamp, contactor jogging, and self-holding start/stop. An empty workspace supports independent wiring.
 - Wire drawing, selection, colors, draggable bends, deletion, undo, and redo. Cycle overlapping wires; a selected wire pulses slowly and marks its endpoints.
 - Short-circuit and unstable-circuit messages, overload relay tests, emergency stop, and normally open/closed contact behavior.
-- Complete Simplified Chinese and English interfaces, light/dark themes, collapsible navigation, zoom, pan, and full screen.
+- Complete Simplified Chinese and English interfaces, light/dark themes, a compact header, collapsible navigation, zoom, pan, and full screen.
 - Browser-local autosave for your own workspace, validated JSON import, file export, and protection against overwriting damaged saved projects.
 
 No account or backend is required. Installing dependencies needs internet access; core experiments use local resources afterward.
 
 ## Run locally
+
+Download and extract the source from the [v0.1.1-alpha release page](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.1.1-alpha), or clone the repository. The application is available for local use after download; there is no hosted online demo.
 
 Install Node.js **22.12+** and npm; Node.js **24 LTS** is recommended. In the project directory:
 
@@ -70,13 +72,13 @@ Wire crossings, overlaps, and routes passing over terminals do not connect them:
 
 ## Saving and recovery
 
-**Your own workspace** saves its name and wires in local storage for the current browser and address; there is no cloud sync. Language and theme preferences are separate from project files. Undo/redo history does not survive a refresh.
+**Your own workspace** saves its name and wires in local storage for the current browser and address. Only one personal workspace is saved; multiple-project management and cloud sync are not available. Language and theme preferences are separate from project files. Undo/redo history does not survive a refresh.
 
 **Examples are temporary exercises.** Entering one preserves your original workspace and history; exiting restores them. Switching examples starts from the new template. Exit or refresh discards practice changes, so export to keep them; the Save icon also exports in an example. Refresh returns to your saved personal workspace.
 
 Successful import replaces your own workspace and exits any example. Undo can restore the previous wires; the name is not part of wiring history. Failed import preserves the current project. Damaged or unknown-version saved data is protected from overwrite; see [Architecture](docs/ARCHITECTURE.md#外部数据与版本) for recovery instructions.
 
-Export is implemented, but the full download-to-disk and reimport workflow has not yet been verified in the user's Chrome browser. Check the browser's downloads and the actual file; the interface only reports that a download was requested. See the [verification record](docs/VERIFICATION.md).
+Export has been verified locally to download an actual file with the correct name and complete wiring data; the full round trip through reimporting that file remains unverified. Check the browser's downloads and the actual file; the interface only reports that a download was requested.
 
 ## Model scope and known limitations
 
@@ -104,17 +106,16 @@ npm run preview      # Preview the existing production build; use the printed ad
 Reports should include the browser, reproduction steps, expected behavior, and actual behavior. Attach a `.wirebench.json` with personal information removed if needed. Please use [Issues](https://github.com/EthanSky2986/WireBench-2D/issues).
 
 - [Contributing](CONTRIBUTING.md)
-- [Quality improvement plan](docs/QUALITY_PLAN.md)
 - [Changelog](CHANGELOG.md) · [Roadmap](ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md) · [Detailed development conventions](docs/CONTRIBUTING.md) · [Internationalization](docs/INTERNATIONALIZATION.md)
-- [Verification record](docs/VERIFICATION.md) · [Open-source readiness](docs/OPEN_SOURCE_READINESS.md) · [Project constraints](AGENTS.md)
+- [Visual guidelines](docs/VISUAL_STYLE.md) · [Theming](docs/THEMING.md)
 
-Detailed architecture and verification documents are currently in Chinese. The contribution guide, roadmap, and changelog provide English summaries.
+Detailed architecture and development documents are currently in Chinese. The contribution guide, roadmap, and changelog provide English summaries.
 
 ## Repository and licensing status
 
-The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v0.1.0-alpha` teaching preview. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
+The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v0.1.1-alpha` teaching preview. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
 
-The public repository starts with checked, fresh history and contains no old commits. The original repository remains a private backup. An independent student/teacher trial and a real file-download/reimport round trip remain unverified; see the [release checks](docs/OPEN_SOURCE_READINESS.md).
+An independent classroom trial by a teacher or student remains pending. Follow the example steps above and report reproducible feedback; the current scope and limitations are described above.
 
 `private: true` in `package.json` prevents accidental npm publication; it does not control GitHub visibility. Sharing source on GitHub does not require publishing an npm package.

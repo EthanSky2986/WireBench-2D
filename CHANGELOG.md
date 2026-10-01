@@ -1,21 +1,25 @@
 # Changelog / 变更记录
 
-## Unreleased / 尚未发布新版本
+## v0.1.1-alpha — 2026-10-01
 
 - 将“接线实验台”标题移至顶部品牌栏，移除重复的大标题区，为普通视图增加画布高度。1280×720 窗口实测增加 101 像素；全屏入口保留。
-
 - 按补充资料将 HL1–HL3 合并到竖向共用灯面板，下方连续六位端子依次对应各灯的 1、2 端子，固定引出线保留。原端子 ID、存档格式和灯回路逻辑不变。
 - SB1–SB3、急停与各自端子组上下对齐；保留连续 14 位端子排。
 - FR 本体只查看详情，画布与详情均提供独立 TEST/RESET；区分正常和跳闸，布线/平移经过按钮不触发操作。旋钮和真实热保护仍明确为未模拟。
-- 缩短 SQ 提示占用的宽度，避免英文说明相互重叠；更新操作指南与质量改进顺序。
+- 缩短 SQ 提示占用的宽度，避免英文说明相互重叠；同步更新中英文操作指南。
+- 当前源码树移除内部开发约定、计划与验收记录，保留面向使用者和贡献者的公开文档。发布方式仍为下载后本地运行，不提供在线体验。
 
-English: Compact header with more vertical canvas space; shared three-lamp enclosure with a six-position terminal bank; aligned SB controls; independent FR inspection, TEST and RESET with routing protection; clearer trip status and non-overlapping SQ hints. Electrical IDs and the v1 exchange format are unchanged. Real thermal/current behavior and project management remain future work.
+English: Compact header with more vertical canvas space; shared three-lamp enclosure with a six-position terminal bank; aligned SB controls; independent FR inspection, TEST and RESET with routing protection; clearer trip status and non-overlapping SQ hints. Electrical IDs and the v1 exchange format are unchanged. Internal development instructions, plans, and verification records are removed from the current source tree; public user and contributor documentation remains. Distribution continues as a local application to download, with no hosted demo. Real thermal/current behavior and multiple-project management remain future work.
+
+独立教师或学生的课堂试用，以及导出文件实际落盘后重新导入的完整流程，仍待验证。
+
+An independent classroom trial and a real file-download/reimport round trip remain unverified.
 
 ## v0.1.0-alpha — 2026-10-01
 
-首个 MIT 开源教学预览版。公开仓库使用全新历史，排除所有用户提供的图片。独立教学试用及真实文件下载与重新导入仍待验收；详见[发布检查记录](docs/OPEN_SOURCE_READINESS.md)。
+首个 MIT 开源教学预览版，不分发用户提供的照片、手绘或产品图片。发布时，独立教学试用及真实文件下载与重新导入仍待验证。
 
-First MIT open-source teaching preview. The public repository uses fresh history and excludes all user-supplied images. Independent classroom testing and a real file-download/reimport round trip remain unverified; see [release checks](docs/OPEN_SOURCE_READINESS.md).
+First MIT open-source teaching preview, excluding user-supplied photographs, sketches, and product images. Independent classroom testing and a real file-download/reimport round trip were unverified at this release.
 
 ### Added / 新增
 
@@ -39,6 +43,6 @@ English: Restored SQ leads into the duct and the continuous SB terminal bank; fi
 
 ### Scope / 范围
 
-仿真仍为逻辑通断模型；真实电压电流、三相电机运动、温升和串联分压尚未模拟。圆弯导线仍在视觉小样中，正式走线路径不会自动修改。文件下载落盘、跨浏览器与高线数性能等验收状态以准备清单和验收记录为准。
+仿真仍为逻辑通断模型；真实电压电流、三相电机运动、温升和串联分压尚未模拟。圆弯导线仍在视觉小样中，正式走线路径不会自动修改。发布时，真实文件下载与重新导入、完整跨浏览器兼容性和 500 根导线的性能均未完成验证。
 
-The simulator remains a logical switching model. Physical voltage/current, three-phase motor motion, thermal behavior, and series-load voltage division are not simulated. Rounded wires remain in the material study; existing main-bench routes are not automatically changed. Consult the readiness and verification records for download, cross-browser, and high-wire-count checks.
+The simulator remains a logical switching model. Physical voltage/current, three-phase motor motion, thermal behavior, and series-load voltage division are not simulated. Rounded wires remain in the material study; existing main-bench routes are not automatically changed. At this release, real file download/reimport, full cross-browser compatibility, and performance with 500 wires had not been verified.

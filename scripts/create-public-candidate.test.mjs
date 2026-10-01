@@ -130,7 +130,9 @@ async function fixture() {
   return { source, output };
 }
 
-describe('public snapshot export', () => {
+// Real Git/tar subprocesses can exceed the default 5s on Windows CI.
+// Scope the allowance to export integration tests; pure unit tests keep their default.
+describe('public snapshot export', { timeout: 30_000 }, () => {
   it('creates a deterministic clean single-commit candidate with no private history or remote', async () => {
     const { source, output } = await fixture();
     git(['remote', 'add', 'origin', 'https://example.invalid/private'], source);
@@ -164,6 +166,39 @@ describe('public snapshot export', () => {
     git(['add', '--all'], source);
     git(['commit', '-m', 'Add renamed reference'], source);
     await expect(createPublicCandidate(source, output)).rejects.toThrow('renamed.bin');
+  });
+
+  it.each([
+    'AGENTS.md',
+    'PROJECT_PLAN.md',
+    'docs/QUALITY_PLAN.md',
+    'docs/VERIFICATION.md',
+    'docs/OPEN_SOURCE_READINESS.md',
+  ])('rejects an accidentally tracked internal document: %s', async (name) => {
+    const { source, output } = await fixture();
+    await writeFile(path.join(source, name), 'Internal working notes');
+    git(['add', '--all'], source);
+    git(['commit', '-m', 'Accidentally track internal notes'], source);
+    await expect(createPublicCandidate(source, output)).rejects.toThrow(name);
+  });
+
+  it('leaves ignored local notes out while retaining public contributor documentation', async () => {
+    const { source, output } = await fixture();
+    await writeFile(path.join(source, '.gitignore'), '/AGENTS.md\n');
+    await writeFile(path.join(source, 'AGENTS.md'), 'Local working notes');
+    await writeFile(path.join(source, 'CONTRIBUTING.md'), 'Public contribution guide');
+    git(['add', '--all'], source);
+    git(['commit', '-m', 'Keep local notes private'], source);
+    const result = await createPublicCandidate(source, output);
+    await expect(readFile(path.join(result.candidateDirectory, 'AGENTS.md'))).rejects.toMatchObject(
+      {
+        code: 'ENOENT',
+      },
+    );
+    expect(await readFile(path.join(source, 'AGENTS.md'), 'utf8')).toBe('Local working notes');
+    expect(await readFile(path.join(result.candidateDirectory, 'CONTRIBUTING.md'), 'utf8')).toBe(
+      'Public contribution guide',
+    );
   });
 
   it('rejects symlinks rather than exporting links outside the snapshot', async () => {
