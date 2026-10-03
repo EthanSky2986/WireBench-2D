@@ -20,3 +20,9 @@ User-supplied photographs, product images, sketches, and their copies are not di
 用户提供的照片、产品图、手绘图及其副本不随公开版本发布，也不在本项目 MIT 许可的授权范围内。仓库保留的截图来自应用自身界面；端子布局说明由当前模型和布局代码绘制。
 
 Device and product identifiers describe the educational reference configuration. They do not imply endorsement by any manufacturer or grant trademark rights.
+
+## Sponsorship images / 赞助收款码
+
+The payment images in `docs/support/` are a separate, explicitly authorized publication by the maintainer for project sponsorship. They are not training reference materials and are not licensed under MIT. WeChat Pay and Alipay marks belong to their respective owners.
+
+`docs/support/` 中的收款码由维护者另行明确授权公开，用于项目赞助；它们不属于实验台参考资料，也不按 MIT 授权。微信支付、支付宝等标识归各自权利人所有。

@@ -119,3 +119,7 @@ The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open so
 An independent classroom trial by a teacher or student remains pending. Follow the example steps above and report reproducible feedback; the current scope and limitations are described above.
 
 `private: true` in `package.json` prevents accidental npm publication; it does not control GitHub visibility. Sharing source on GitHub does not require publishing an npm package.
+
+## Support the project
+
+If this project helps you, [optional donations](SUPPORT.en.md) are welcome. Bug reports, teaching suggestions, and code contributions are equally appreciated. No donation is required to use it.
