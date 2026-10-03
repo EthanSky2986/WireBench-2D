@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { Minus, Plus, Maximize, Move, MousePointer2, Cable } from 'lucide-react';
 import {
@@ -20,6 +20,7 @@ import type { Point } from '../layout';
 import { DEVICE_MAP, UNSUPPORTED_TERMINALS } from '../sim/model';
 import type { Wire } from '../sim/model';
 import type { SimulationResult } from '../sim/engine';
+import type { LoadTrace } from '../sim/loadTrace';
 import { RefinedDeviceArt } from './RefinedDeviceArt';
 import { TerminalStripArt } from './TerminalStripArt';
 import ThermalControls from './ThermalControls';
@@ -27,8 +28,12 @@ import LampPanel from './LampPanel';
 import { useI18n } from '../i18n';
 import { findWireCandidates, nextWireCandidate } from '../rendering/wireSelection';
 import { fitView, resizeView, zoomView } from '../rendering/benchViewport';
+import { findWireCrossings } from '../rendering/wireCrossings';
 
 interface Props {
+  stepMode?: boolean;
+  readOnly?: boolean;
+  trace?: LoadTrace | null;
   wires: Wire[];
   inputs: Record<string, boolean>;
   result: SimulationResult;
@@ -57,20 +62,43 @@ interface WireVisualProps {
   selected: boolean;
   fault: boolean;
   live: boolean;
+  traced?: boolean;
 }
 
-function WireVisual({ points, color, selected, fault, live }: WireVisualProps) {
+function WireVisual({ points, color, selected, fault, live, traced }: WireVisualProps) {
   const route = polyline(points);
+  const vectorEffect = selected ? 'non-scaling-stroke' : undefined;
   return (
     <g className="wire-visual" pointerEvents="none" aria-hidden="true">
+      {traced && !fault && (
+        <polyline
+          className="wire-trace-halo"
+          points={route}
+          fill="none"
+          stroke="var(--learning-trace)"
+          strokeWidth="8"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
       <polyline
         className="wire-emphasis"
         points={route}
         fill="none"
-        stroke={fault ? 'var(--danger)' : 'var(--accent)'}
+        stroke={fault ? 'var(--danger)' : 'var(--wire-selection)'}
         strokeWidth="9"
+        vectorEffect={vectorEffect}
       />
-      <polyline points={route} fill="none" stroke="var(--wire-halo)" strokeWidth="5.6" />
+      <polyline
+        points={route}
+        fill="none"
+        stroke="var(--wire-halo)"
+        strokeWidth="5.6"
+        vectorEffect={vectorEffect}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
       <polyline
         points={route}
         fill="none"
@@ -78,6 +106,7 @@ function WireVisual({ points, color, selected, fault, live }: WireVisualProps) {
         strokeWidth={selected ? 3.8 : live ? 3.6 : 2.8}
         strokeLinejoin="round"
         strokeLinecap="round"
+        vectorEffect={vectorEffect}
       />
       {live && (
         <polyline
@@ -87,6 +116,7 @@ function WireVisual({ points, color, selected, fault, live }: WireVisualProps) {
           strokeWidth=".9"
           opacity=".65"
           strokeDasharray="3 8"
+          vectorEffect={vectorEffect}
         />
       )}
     </g>
@@ -95,6 +125,10 @@ function WireVisual({ points, color, selected, fault, live }: WireVisualProps) {
 
 export default function Bench(p: Props) {
   const { locale, t } = useI18n();
+  const maskPrefix = useId();
+  const traceWires = useMemo(() => new Set(p.trace?.wireIds), [p.trace]);
+  const traceTerminals = useMemo(() => new Set(p.trace?.terminalIds), [p.trace]);
+  const hasTrace = p.trace?.status === 'energized';
   const host = useRef<HTMLDivElement>(null),
     svg = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ w: 1000, h: 720 }),
@@ -128,6 +162,35 @@ export default function Bench(p: Props) {
     [p.wires, draft],
   );
   const selectedWire = wireGeometry.find((wire) => wire.id === p.selectedWire);
+  const crossingMasks = useMemo(() => {
+    const crossings = findWireCrossings(wireGeometry, p.selectedWire);
+    return wireGeometry.flatMap((wire, index) => {
+      const gaps = crossings.get(wire.id);
+      if (!gaps?.length) return [];
+      const xs = wire.points.map((point) => point.x);
+      const ys = wire.points.map((point) => point.y);
+      const x = Math.min(...xs) - 12;
+      const y = Math.min(...ys) - 12;
+      return [
+        {
+          wireId: wire.id,
+          id: `${maskPrefix}-crossing-${index}`,
+          x,
+          y,
+          width: Math.max(...xs) - x + 12,
+          height: Math.max(...ys) - y + 12,
+          // One path per wire avoids thousands of DOM nodes in dense projects.
+          holes: gaps
+            .map(({ x, y }) => `M${x - 4.5} ${y}a4.5 4.5 0 1 0 9 0a4.5 4.5 0 1 0 -9 0Z`)
+            .join(' '),
+        },
+      ];
+    });
+  }, [wireGeometry, p.selectedWire, maskPrefix]);
+  const maskByWire = useMemo(
+    () => new Map(crossingMasks.map((mask) => [mask.wireId, mask.id])),
+    [crossingMasks],
+  );
   const overlapPoint = overlap?.point;
   const overlapIds = useMemo(
     () => (overlapPoint ? findWireCandidates(wireGeometry, overlapPoint, 7.5, view.z) : []),
@@ -232,7 +295,7 @@ export default function Bench(p: Props) {
       e.currentTarget.setPointerCapture(e.pointerId);
       return;
     }
-    if (p.pending && !p.powered) {
+    if (p.pending && !p.powered && !p.readOnly) {
       p.onRoute(clampPoint(world(e)));
     } else {
       setOverlap(null);
@@ -298,6 +361,22 @@ export default function Bench(p: Props) {
         onPointerLeave={() => setCursor(null)}
       >
         <defs>
+          {crossingMasks.map(({ id, x, y, width, height, holes }) => (
+            <mask
+              key={id}
+              id={id}
+              x={x}
+              y={y}
+              width={width}
+              height={height}
+              maskUnits="userSpaceOnUse"
+              maskContentUnits="userSpaceOnUse"
+              style={{ maskType: 'luminance' }}
+            >
+              <rect x={x} y={y} width={width} height={height} fill="white" />
+              <path d={holes} fill="black" />
+            </mask>
+          ))}
           <pattern id="slots" width="24" height="30" patternUnits="userSpaceOnUse">
             <rect
               x="8"
@@ -471,13 +550,14 @@ export default function Bench(p: Props) {
                         })
                   }
                   aria-pressed={operable ? !!p.inputs[d.id] : undefined}
-                  className={`device-target ${p.selected === d.id ? 'selected' : ''}`}
+                  aria-disabled={operable && p.readOnly ? true : undefined}
+                  className={`device-target ${p.selected === d.id ? 'selected' : ''} ${p.trace?.loadId === d.id ? 'trace-target' : ''}`}
                   transform={`translate(${part.x} ${part.y}) scale(${part.size / 160})`}
                   onPointerDown={(e) => {
                     if (e.button !== 0 || p.mode === 'pan' || space || p.pending) return;
                     e.stopPropagation();
                     p.onSelect(d.id);
-                    if (d.kind === 'button') {
+                    if (d.kind === 'button' && !p.stepMode && !p.readOnly) {
                       e.currentTarget.setPointerCapture(e.pointerId);
                       p.onOperate(d.id, true);
                     }
@@ -485,20 +565,21 @@ export default function Bench(p: Props) {
                   onPointerUp={(e) => {
                     if (e.button !== 0 || p.mode === 'pan' || space || p.pending) return;
                     e.stopPropagation();
-                    if (d.kind === 'button') p.onOperate(d.id, false);
+                    if (d.kind === 'button' && !p.stepMode && !p.readOnly) p.onOperate(d.id, false);
                   }}
                   onPointerCancel={() => {
-                    if (d.kind === 'button') p.onOperate(d.id, false);
+                    if (d.kind === 'button' && !p.stepMode && !p.readOnly) p.onOperate(d.id, false);
                   }}
                   onLostPointerCapture={() => {
-                    if (d.kind === 'button') p.onOperate(d.id, false);
+                    if (d.kind === 'button' && !p.stepMode && !p.readOnly) p.onOperate(d.id, false);
                   }}
                   onClick={(e) => {
                     if (p.mode === 'pan' || space) return;
                     e.stopPropagation();
                     if (p.pending) return;
                     p.onSelect(d.id);
-                    if (operable && d.kind !== 'button') p.onOperate(d.id, !p.inputs[d.id]);
+                    if (operable && !p.readOnly && (d.kind !== 'button' || p.stepMode))
+                      p.onOperate(d.id, !p.inputs[d.id]);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -506,18 +587,28 @@ export default function Bench(p: Props) {
                       e.stopPropagation();
                       if (e.repeat || p.pending) return;
                       p.onSelect(d.id);
-                      if (operable) p.onOperate(d.id, d.kind === 'button' ? true : !p.inputs[d.id]);
+                      if (operable && !p.readOnly)
+                        p.onOperate(
+                          d.id,
+                          d.kind === 'button' && !p.stepMode ? true : !p.inputs[d.id],
+                        );
                     }
                   }}
                   onKeyUp={(e) => {
-                    if ((e.key === ' ' || e.key === 'Enter') && d.kind === 'button') {
+                    if (
+                      (e.key === ' ' || e.key === 'Enter') &&
+                      d.kind === 'button' &&
+                      !p.stepMode &&
+                      !p.readOnly
+                    ) {
                       e.preventDefault();
                       e.stopPropagation();
                       p.onOperate(d.id, false);
                     }
                   }}
                   onBlur={() => {
-                    if (d.kind === 'button' && p.inputs[d.id]) p.onOperate(d.id, false);
+                    if (d.kind === 'button' && !p.stepMode && !p.readOnly && p.inputs[d.id])
+                      p.onOperate(d.id, false);
                   }}
                 >
                   <rect
@@ -559,7 +650,7 @@ export default function Bench(p: Props) {
                         id={d.id}
                         tripped={!!p.inputs[d.id]}
                         surface="canvas"
-                        blocked={!!p.pending || p.mode === 'pan' || space}
+                        blocked={p.readOnly || !!p.pending || p.mode === 'pan' || space}
                         onSelect={() => p.onSelect(d.id)}
                         onOperate={p.onOperate}
                       />
@@ -595,7 +686,13 @@ export default function Bench(p: Props) {
                     className={`board-subtitle ${d.kind === 'limit' ? 'limit-operation-hint' : ''}`}
                   >
                     {d.kind === 'button'
-                      ? t('bench.hold')
+                      ? p.stepMode
+                        ? t(
+                            p.inputs[d.id]
+                              ? 'learning.stepButtonRelease'
+                              : 'learning.stepButtonPress',
+                          )
+                        : t('bench.hold')
                       : p.inputs[d.id]
                         ? t('bench.reset')
                         : t('bench.trigger')}
@@ -631,7 +728,7 @@ export default function Bench(p: Props) {
             return (
               <g
                 key={w.id}
-                className={`user-wire ${selected ? 'is-selected' : selectedWire && !fault ? 'is-muted' : ''} ${fault ? 'is-fault' : ''}`}
+                className={`user-wire ${selected ? 'is-selected' : (selectedWire || (hasTrace && !traceWires.has(w.id))) && !fault ? 'is-muted' : ''} ${fault ? 'is-fault' : ''} ${traceWires.has(w.id) ? 'is-traced' : ''}`}
                 role="button"
                 tabIndex={0}
                 aria-pressed={selected}
@@ -670,13 +767,16 @@ export default function Bench(p: Props) {
                   className="wire-hit"
                 />
                 {!selected && (
-                  <WireVisual
-                    points={points}
-                    color={w.color}
-                    selected={false}
-                    fault={fault}
-                    live={live}
-                  />
+                  <g mask={maskByWire.has(w.id) ? `url(#${maskByWire.get(w.id)})` : undefined}>
+                    <WireVisual
+                      points={points}
+                      color={w.color}
+                      selected={false}
+                      fault={fault}
+                      live={hasTrace ? false : live}
+                      traced={traceWires.has(w.id)}
+                    />
+                  </g>
                 )}
               </g>
             );
@@ -692,16 +792,24 @@ export default function Bench(p: Props) {
                 color={selectedWire.color}
                 selected
                 fault={highlighted.has(selectedWire.id)}
-                live={p.powered && !p.result.fault && p.result.potential[selectedWire.from] === 'L'}
+                live={
+                  !hasTrace &&
+                  p.powered &&
+                  !p.result.fault &&
+                  p.result.potential[selectedWire.from] === 'L'
+                }
+                traced={traceWires.has(selectedWire.id)}
               />
               {!p.powered &&
+                !p.readOnly &&
                 selectedWire.points.slice(1, -1).map((pt, i) => (
                   <circle
                     key={i}
                     cx={pt.x}
                     cy={pt.y}
-                    r="6"
+                    r={Math.max(6, 4.5 / view.z)}
                     className="wire-handle"
+                    vectorEffect="non-scaling-stroke"
                     pointerEvents="all"
                     aria-label={t('bench.waypoint', { index: i + 1 })}
                     onClick={(e) => e.stopPropagation()}
@@ -771,15 +879,28 @@ export default function Bench(p: Props) {
                 onBlur={() => setHover(null)}
               >
                 <circle cx={s.x} cy={s.y} r="10.5" fill="transparent" />
+                {traceTerminals.has(s.id) && (
+                  <circle
+                    cx={s.x}
+                    cy={s.y}
+                    r={Math.max(8, 5.5 / view.z)}
+                    fill="none"
+                    stroke="var(--learning-trace)"
+                    strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
+                    pointerEvents="none"
+                  />
+                )}
                 {(selectedWire?.from === s.id || selectedWire?.to === s.id) && (
                   <circle
                     className="wire-terminal-highlight"
                     cx={s.x}
                     cy={s.y}
-                    r="9"
+                    r={Math.max(9, 7 / view.z)}
                     fill="none"
-                    stroke="var(--accent)"
+                    stroke="var(--wire-selection)"
                     strokeWidth="2"
+                    vectorEffect="non-scaling-stroke"
                     pointerEvents="none"
                   />
                 )}
@@ -822,10 +943,41 @@ export default function Bench(p: Props) {
             CONTROL LAB / 2D
           </text>
         </g>
+        {selectedWire && (
+          <g className="wire-endpoint-markers" pointerEvents="none" aria-hidden="true">
+            {[selectedWire.from, selectedWire.to].map((id, index) => {
+              const socket = SOCKET_MAP[id];
+              const x = socket.x * view.z + view.x;
+              const y = socket.y * view.z + view.y;
+              // Put badges outside the terminal strip, away from its number labels.
+              // Fan close same-side endpoints apart in screen space at small zooms.
+              const offset = socket.side === 'top' ? -24 : 24;
+              const other = SOCKET_MAP[index === 0 ? selectedWire.to : selectedWire.from];
+              const close =
+                socket.side === other.side &&
+                Math.hypot(socket.x - other.x, socket.y - other.y) * view.z < 24;
+              const badgeX = close ? (index === 0 ? -12 : 12) : 0;
+              return (
+                <g key={id} transform={`translate(${x} ${y})`}>
+                  <path d={`M0 ${Math.sign(offset) * 8}L${badgeX} ${offset}`} />
+                  <circle cx={badgeX} cy={offset} r="8" />
+                  <text x={badgeX} y={offset} dominantBaseline="central" textAnchor="middle">
+                    {index === 0 ? 'A' : 'B'}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
       </svg>
       {showOverlap && !hover && (
         <div className="wire-overlap-hint">
-          <span role="status">{t('bench.overlapHint', { count: overlapIds.length })}</span>
+          <span role="status">
+            {t('bench.overlapHint', {
+              index: overlapIds.indexOf(overlap.selected) + 1,
+              count: overlapIds.length,
+            })}
+          </span>
           <button
             onClick={() => {
               const selected = nextWireCandidate(overlapIds, p.selectedWire);

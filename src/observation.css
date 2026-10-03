@@ -1,0 +1,200 @@
+.observation-panel {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.observation-heading,
+.observation-context,
+.observation-trace-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.observation-heading h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.observation-context {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.observation-context.is-history {
+  color: var(--accent-text);
+}
+
+.observation-context button {
+  padding: 5px 7px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.observation-navigation {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  gap: 4px;
+  align-items: center;
+  margin: 8px 0 14px;
+}
+
+.observation-navigation .icon-button {
+  width: 28px;
+  height: 32px;
+}
+
+.observation-navigation select,
+.observation-load-picker select {
+  min-width: 0;
+  width: 100%;
+  padding: 7px 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text-primary);
+  background: var(--surface-raised);
+  font: inherit;
+}
+
+.observation-load-picker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+}
+
+.observation-trace-toggle {
+  width: fit-content;
+  margin: 10px 0;
+  cursor: pointer;
+}
+
+.observation-trace-toggle input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent-solid);
+}
+
+.observation-result {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-inset);
+}
+
+.observation-result.is-energized {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.observation-result.is-energized > strong {
+  color: var(--accent-text);
+}
+
+.observation-result.is-fault {
+  color: var(--danger);
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+}
+
+.observation-panel p {
+  margin: 8px 0 0;
+}
+
+.observation-panel .observation-action {
+  margin: -5px 0 12px;
+  font-weight: 600;
+}
+
+.observation-ends {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.observation-ends > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+
+.observation-ends span {
+  color: var(--text-secondary);
+}
+
+.observation-panel code {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.observation-panel h3 {
+  margin: 12px 0 6px;
+  font-size: 12px;
+}
+
+.observation-contact-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.observation-contact-list li {
+  padding: 3px 5px;
+  color: var(--learning-trace);
+  background: color-mix(in srgb, var(--learning-trace) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--learning-trace) 50%, var(--border));
+  border-radius: 4px;
+}
+
+.observation-panel .observation-hint {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.observation-differences {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.observation-panel summary {
+  cursor: pointer;
+}
+
+.observation-differences > summary {
+  font-weight: 600;
+}
+
+.observation-differences ul {
+  padding-left: 16px;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.observation-differences li + li {
+  margin-top: 5px;
+}
+
+.observation-wire-changes {
+  margin-top: 6px;
+}
+
+.observation-panel :is(button, select, input, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}

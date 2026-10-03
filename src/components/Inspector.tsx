@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode, type RefObject } from 'react';
 import {
   ArrowRight,
   Cable,
@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
+  X,
 } from 'lucide-react';
 import { RefinedDeviceArt } from './RefinedDeviceArt';
 import ThermalControls from './ThermalControls';
@@ -18,6 +19,15 @@ import { friendlyTerminal, localizeDevice } from '../layout';
 import { useI18n } from '../i18n';
 
 interface InspectorProps {
+  learning?: ReactNode;
+  learningOpen?: boolean;
+  stepMode?: boolean;
+  readOnly?: boolean;
+  panelRef?: RefObject<HTMLElement | null>;
+  compact?: boolean;
+  hidden?: boolean;
+  onClose?: () => void;
+  onRouteWire: () => void;
   selected: string | null;
   wire: Wire | undefined;
   inputs: Record<string, boolean>;
@@ -31,6 +41,15 @@ interface InspectorProps {
 
 /** Presents the selected object; persistent wire changes remain owned by App. */
 export default function Inspector({
+  learning,
+  learningOpen = false,
+  stepMode = false,
+  readOnly = false,
+  panelRef,
+  compact = false,
+  hidden = false,
+  onClose,
+  onRouteWire,
   selected,
   wire,
   inputs,
@@ -50,7 +69,7 @@ export default function Inspector({
       ? powered
       : !!(result.coils[device.id] || result.lamps[device.id] || inputs[device.id])
     : false;
-  const buttonId = !wire && device?.kind === 'button' ? device.id : null;
+  const buttonId = !stepMode && !wire && device?.kind === 'button' ? device.id : null;
 
   // A removed/replaced momentary control must never leave its input latched.
   useEffect(() => {
@@ -59,11 +78,44 @@ export default function Inspector({
   }, [buttonId, onOperate]);
 
   return (
-    <aside className="inspector">
+    <aside
+      id="bench-inspector"
+      ref={panelRef}
+      className={`inspector ${compact ? 'inspector-drawer' : ''} ${learningOpen ? 'learning-open' : ''} ${stepMode ? 'is-observing' : ''}`}
+      hidden={hidden}
+      inert={hidden}
+      tabIndex={-1}
+      aria-label={t('ui.inspection.label')}
+    >
       <div className="inspector-heading">
         <span>{wire ? t('inspector.wireTitle') : t('inspector.deviceTitle')}</span>
-        <SlidersHorizontal size={15} />
+        {onClose ? (
+          <button className="icon-button" onClick={onClose} aria-label={t('ui.inspection.close')}>
+            <X size={16} />
+          </button>
+        ) : (
+          <SlidersHorizontal size={15} />
+        )}
       </div>
+      {stepMode && !wire && device?.kind === 'button' && (
+        <div className="step-input-actions">
+          <button
+            className="button outline"
+            disabled={readOnly || active}
+            onClick={() => onOperate(device.id, true)}
+          >
+            {t('learning.press', { id: device.id })}
+          </button>
+          <button
+            className="button outline"
+            disabled={readOnly || !active}
+            onClick={() => onOperate(device.id, false)}
+          >
+            {t('learning.release', { id: device.id })}
+          </button>
+        </div>
+      )}
+      {learning}
       {wire ? (
         <>
           <div className="wire-preview">
@@ -86,23 +138,23 @@ export default function Inspector({
             <div className="detail-label">{t('inspector.wireColor')}</div>
             <ColorPicker
               value={wire.color}
-              disabled={powered}
+              disabled={powered || readOnly}
               context="selected-wire"
               onChange={(color) => onWireChange({ ...wire, color })}
             />
             <p className="inspector-hint">{t('inspector.routingHint')}</p>
             <button
               className="button outline full"
-              disabled={powered || !wire.points}
-              onClick={() => {
-                const { points, ...rest } = wire;
-                void points;
-                onWireChange(rest);
-              }}
+              disabled={powered || readOnly}
+              onClick={onRouteWire}
             >
               {t('inspector.autoRoute')}
             </button>
-            <button className="button danger full" disabled={powered} onClick={onRemoveWire}>
+            <button
+              className="button danger full"
+              disabled={powered || readOnly}
+              onClick={onRemoveWire}
+            >
               <Trash2 size={15} /> {t('inspector.deleteWire')}
             </button>
           </div>
@@ -160,56 +212,59 @@ export default function Inspector({
                 id={device.id}
                 tripped={active}
                 surface="inspector"
+                blocked={readOnly}
                 onOperate={onOperate}
               />
             )}
-            {['button', 'limit', 'estop'].includes(device.kind) && (
-              <button
-                className={`button operate full ${active ? 'pressed' : ''}`}
-                aria-label={t('inspector.operate', { id: device.id })}
-                onPointerDown={(e) => {
-                  if (device.kind === 'button') {
-                    e.currentTarget.setPointerCapture(e.pointerId);
-                    onOperate(device.id, true);
-                  }
-                }}
-                onPointerUp={() => {
-                  if (device.kind === 'button') onOperate(device.id, false);
-                }}
-                onPointerCancel={() => {
-                  if (device.kind === 'button') onOperate(device.id, false);
-                }}
-                onLostPointerCapture={() => {
-                  if (device.kind === 'button') onOperate(device.id, false);
-                }}
-                onBlur={() => {
-                  if (device.kind === 'button') onOperate(device.id, false);
-                }}
-                onClick={() => {
-                  if (device.kind !== 'button') onOperate(device.id, !inputs[device.id]);
-                }}
-                onKeyDown={(e) => {
-                  if (device.kind === 'button' && (e.key === ' ' || e.key === 'Enter')) {
-                    e.preventDefault();
-                    onOperate(device.id, true);
-                  }
-                }}
-                onKeyUp={(e) => {
-                  if (device.kind === 'button' && (e.key === ' ' || e.key === 'Enter')) {
-                    e.preventDefault();
-                    onOperate(device.id, false);
-                  }
-                }}
-              >
-                {device.kind === 'button'
-                  ? active
-                    ? t('inspector.releaseAction')
-                    : t('inspector.holdAction')
-                  : active
-                    ? t('inspector.resetAction')
-                    : t('inspector.triggerAction')}
-              </button>
-            )}
+            {['button', 'limit', 'estop'].includes(device.kind) &&
+              !(stepMode && device.kind === 'button') && (
+                <button
+                  disabled={readOnly}
+                  className={`button operate full ${active ? 'pressed' : ''}`}
+                  aria-label={t('inspector.operate', { id: device.id })}
+                  onPointerDown={(e) => {
+                    if (device.kind === 'button') {
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                      onOperate(device.id, true);
+                    }
+                  }}
+                  onPointerUp={() => {
+                    if (device.kind === 'button') onOperate(device.id, false);
+                  }}
+                  onPointerCancel={() => {
+                    if (device.kind === 'button') onOperate(device.id, false);
+                  }}
+                  onLostPointerCapture={() => {
+                    if (device.kind === 'button') onOperate(device.id, false);
+                  }}
+                  onBlur={() => {
+                    if (device.kind === 'button') onOperate(device.id, false);
+                  }}
+                  onClick={() => {
+                    if (device.kind !== 'button') onOperate(device.id, !inputs[device.id]);
+                  }}
+                  onKeyDown={(e) => {
+                    if (device.kind === 'button' && (e.key === ' ' || e.key === 'Enter')) {
+                      e.preventDefault();
+                      onOperate(device.id, true);
+                    }
+                  }}
+                  onKeyUp={(e) => {
+                    if (device.kind === 'button' && (e.key === ' ' || e.key === 'Enter')) {
+                      e.preventDefault();
+                      onOperate(device.id, false);
+                    }
+                  }}
+                >
+                  {device.kind === 'button'
+                    ? active
+                      ? t('inspector.releaseAction')
+                      : t('inspector.holdAction')
+                    : active
+                      ? t('inspector.resetAction')
+                      : t('inspector.triggerAction')}
+                </button>
+              )}
             {device.kind === 'contactor' && (
               <div className="coil-row">
                 <span>{t('inspector.coil')}</span>
@@ -221,7 +276,8 @@ export default function Inspector({
             {contacts.length > 0 && (
               <>
                 <div className="detail-label">
-                  {t('inspector.contacts')} <span>{t('inspector.live')}</span>
+                  {t('inspector.contacts')}{' '}
+                  <span>{t(readOnly ? 'learning.historyReadonly' : 'inspector.live')}</span>
                 </div>
                 <div className="contacts">
                   {contacts.map((c) => {
@@ -277,19 +333,21 @@ export default function Inspector({
           {t('inspector.empty')}
         </div>
       )}
-      <div className="activity">
-        <div className="detail-label">
-          <History size={13} /> {t('inspector.activity')}
+      {!learning && (
+        <div className="activity">
+          <div className="detail-label">
+            <History size={13} /> {t('inspector.activity')}
+          </div>
+          <div aria-live="polite">
+            {events.slice(0, 3).map((event, i) => (
+              <div className="event" key={`${event}-${i}`}>
+                <i />
+                <span>{event}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div aria-live="polite">
-          {events.slice(0, 3).map((event, i) => (
-            <div className="event" key={`${event}-${i}`}>
-              <i />
-              <span>{event}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
       <div className="model-note">
         <ShieldCheck size={15} />
         <p>

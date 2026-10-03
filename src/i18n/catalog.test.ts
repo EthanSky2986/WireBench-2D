@@ -5,6 +5,8 @@ import { zh as benchZh } from './bench.zh';
 import { en as benchEn } from './bench.en';
 import { zh as messagesZh } from './messages.zh';
 import { en as messagesEn } from './messages.en';
+import { zh as learningZh } from './learning.zh';
+import { en as learningEn } from './learning.en';
 import { zhCN } from './zh-CN';
 import { en } from './en';
 
@@ -12,6 +14,7 @@ const groups = [
   { name: 'ui', zh: uiZh, en: uiEn },
   { name: 'bench', zh: benchZh, en: benchEn },
   { name: 'messages', zh: messagesZh, en: messagesEn },
+  { name: 'learning', zh: learningZh, en: learningEn },
 ];
 const catalogs = [...groups, { name: 'combined', zh: zhCN, en }];
 

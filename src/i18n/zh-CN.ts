@@ -1,14 +1,13 @@
 import { zh as ui } from './ui.zh';
 import { zh as bench } from './bench.zh';
 import { zh as messages } from './messages.zh';
+import { zh as learning } from './learning.zh';
 
 export const zhCN = {
-  'language.label': '界面语言',
-  'language.zh-CN': '简体中文',
-  'language.en': 'English',
   ...ui,
   ...bench,
   ...messages,
+  ...learning,
 } as const;
 
 export type TranslationKey = keyof typeof zhCN;

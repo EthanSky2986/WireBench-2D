@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -18,6 +18,10 @@ import {
   Paintbrush,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+  Route,
+  Footprints,
   Play,
   Trash2,
   Power,
@@ -33,14 +37,16 @@ import {
 } from 'lucide-react';
 import Bench from './components/Bench';
 import Inspector from './components/Inspector';
-import LanguageMenu from './components/LanguageMenu';
+import ObservationPanel from './components/ObservationPanel';
+import { traceLoad } from './sim/loadTrace';
+import LanguageToggle from './components/LanguageToggle';
 import ThemeToggle from './components/ThemeToggle';
 import ResetMenu from './components/ResetMenu';
 import Modal from './components/Modal';
 import LayoutReference from './components/LayoutReference';
 import { createWorkspaceState, currentWorkspace, workspaceReducer } from './workspace';
 import ColorPicker, { WIRE_COLORS } from './components/ColorPicker';
-import { DEVICES, TERMINAL_IDS } from './sim/model';
+import { DEVICES, LOADS, TERMINAL_IDS } from './sim/model';
 import type { Wire } from './sim/model';
 import { useSimulation } from './hooks/useSimulation';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
@@ -54,6 +60,10 @@ import type { Point } from './layout';
 import { PROJECT_LIMITS } from './limits';
 import { readStoredProject, saveStoredProject, type StorageProblem } from './storage';
 import { APP_VERSION } from './version';
+import { arrangeAutomaticWires, routeNewWire } from './rendering/wireRouting';
+import './inspection.css';
+import './observation.css';
+import './observation-integration.css';
 
 type UiMessage =
   | { kind: 'ui'; key: TranslationKey; values?: TranslationValues }
@@ -83,6 +93,20 @@ const EXAMPLE_KEYS: Record<string, Record<'name' | 'subtitle' | 'description', T
     description: 'ui.example.self-hold.description',
   },
 };
+
+function observationTarget(wires: Wire[], preferred: string | null): string {
+  const connectedLoads = LOADS.filter((load) =>
+    wires.some(
+      (wire) => [wire.from, wire.to].includes(load.from) || [wire.from, wire.to].includes(load.to),
+    ),
+  );
+  return (
+    connectedLoads.find((load) => load.deviceId === preferred)?.deviceId ??
+    connectedLoads[0]?.deviceId ??
+    LOADS.find((load) => load.deviceId === preferred)?.deviceId ??
+    LOADS[0].deviceId
+  );
+}
 
 function newId() {
   return crypto.randomUUID();
@@ -121,7 +145,41 @@ export default function App() {
   const ownName = workspaceState.workbench.name;
   const ownWires = workspaceState.workbench.history.present;
   const setName = (name: string) => dispatchWorkspace({ type: 'set-name', name });
-  const { powered, inputs, result, operate, setPower, resetSimulation } = useSimulation(wires);
+  const simulation = useSimulation(wires);
+  const {
+    powered,
+    result,
+    operate,
+    setPower,
+    resetSimulation,
+    snapshots,
+    selectedSnapshotId,
+    displayed,
+    previousDisplayed,
+    viewingHistory,
+    selectSnapshot,
+    releaseMomentary,
+  } = simulation;
+  const [stepMode, setStepMode] = useState(false);
+  const [traceTarget, setTraceTarget] = useState('KM1');
+  const [traceVisible, setTraceVisible] = useState(true);
+  const editLocked = powered || viewingHistory;
+  const trace = useMemo(
+    () => traceLoad(displayed.wires, displayed.result, displayed.powered, traceTarget),
+    [displayed, traceTarget],
+  );
+  const previousTrace = useMemo(
+    () =>
+      previousDisplayed
+        ? traceLoad(
+            previousDisplayed.wires,
+            previousDisplayed.result,
+            previousDisplayed.powered,
+            traceTarget,
+          )
+        : null,
+    [previousDisplayed, traceTarget],
+  );
   const [selected, setSelected] = useState<string | null>('KM1'),
     [selectedWire, setSelectedWire] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null),
@@ -132,6 +190,10 @@ export default function App() {
     [nav, setNav] = useState(() => window.innerWidth > 1050);
   const [examplesExpanded, setExamplesExpanded] = useState(true);
   const [devicesExpanded, setDevicesExpanded] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const inspectorRef = useRef<HTMLElement>(null);
+  const inspectorToggleRef = useRef<HTMLButtonElement>(null);
+  const observationToggleRef = useRef<HTMLButtonElement>(null);
   const [modal, setModal] = useState<'help' | 'reference' | 'new' | null>(null);
   const [notice, setNotice] = useState<UiMessage | null>(
     boot.error ? { kind: 'storage', value: boot } : null,
@@ -141,6 +203,18 @@ export default function App() {
     expanded,
     toggle: toggleFullscreen,
   } = useBenchFullscreen((key) => setNotice(message(key)));
+  useEffect(() => {
+    if (!expanded) setInspectorOpen(false);
+  }, [expanded]);
+  useEffect(() => {
+    if (inspectorOpen && (expanded || (stepMode && window.innerWidth <= 920)))
+      inspectorRef.current?.focus({ preventScroll: true });
+  }, [expanded, inspectorOpen, stepMode]);
+  const closeInspector = () => {
+    setInspectorOpen(false);
+    const trigger = expanded ? inspectorToggleRef.current : observationToggleRef.current;
+    trigger?.focus({ preventScroll: true });
+  };
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'error'>(
     boot.error ? 'error' : 'saved',
   );
@@ -163,23 +237,23 @@ export default function App() {
     [],
   );
   const undo = useCallback(() => {
-    if (powered) return;
+    if (editLocked) return;
     dispatchWorkspace({ type: 'undo' });
     cancel();
     setSelectedWire(null);
-  }, [powered, cancel]);
+  }, [editLocked, cancel]);
   const redo = useCallback(() => {
-    if (powered) return;
+    if (editLocked) return;
     dispatchWorkspace({ type: 'redo' });
     cancel();
     setSelectedWire(null);
-  }, [powered, cancel]);
+  }, [editLocked, cancel]);
   const removeWire = useCallback(() => {
-    if (!selectedWire || powered) return;
+    if (!selectedWire || editLocked) return;
     commit(wires.filter((w) => w.id !== selectedWire));
     setSelectedWire(null);
     log(message('ui.log.wireRemoved'));
-  }, [selectedWire, powered, commit, wires, log]);
+  }, [selectedWire, editLocked, commit, wires, log]);
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
       if (e.defaultPrevented || modal) return;
@@ -244,6 +318,10 @@ export default function App() {
     }
   }, [powered, result, log]);
   const onSocket = (id: string) => {
+    if (viewingHistory) {
+      setNotice(message('learning.historyReadonly'));
+      return;
+    }
     if (powered) {
       setSelected(id.split(':')[0]);
       setSelectedWire(null);
@@ -278,13 +356,14 @@ export default function App() {
       from: pending,
       to: id,
       color,
-      ...(route.length ? { points: route } : {}),
+      points: route.length ? route : routeNewWire(pending, id, wires).slice(1, -1),
     };
     commit([...wires, wire]);
     log(message('ui.log.wireConnected', { from: pending, to: id }));
     cancel();
   };
   const togglePower = () => {
+    if (viewingHistory) return;
     cancel();
     setSelectedWire(null);
     if (powered) {
@@ -296,16 +375,19 @@ export default function App() {
     }
   };
   const loadExample = (id: string) => {
-    if (powered) return;
+    if (editLocked) return;
     const ex = EXAMPLES.find((e) => e.id === id);
     if (!ex) return;
-    const next = ex.wires.map((w) => ({
+    // A fresh exercise should start readable without requiring a separate
+    // arrange action. Imported projects retain their original saved geometry.
+    const next = arrangeAutomaticWires(ex.wires).map((w) => ({
       ...w,
       id: newId(),
       ...(w.points ? { points: w.points.map((pt) => ({ ...pt })) } : {}),
     }));
     dispatchWorkspace({ type: 'enter-example', id, name: exampleText(ex.id, 'name'), wires: next });
     resetSimulation(next);
+    if (stepMode) setTraceTarget(observationTarget(next, traceTarget));
     if (window.innerWidth <= 1050) setNav(false);
     cancel();
     setSelected('KM1');
@@ -382,11 +464,45 @@ export default function App() {
       if (importInput.current) importInput.current.value = '';
     }
   };
+  const selectedConnection = wires.find((wire) => wire.id === selectedWire);
+  const canArrange = wires.some((wire) => wire.points === undefined);
+  const arrangeWires = () => {
+    if (editLocked || pending || !canArrange) return;
+    commit(arrangeAutomaticWires(wires));
+    log(message('ui.log.wiresArranged'));
+    setNotice(message('ui.notice.wiresArranged'));
+  };
+  const rerouteWire = () => {
+    if (editLocked || pending || !selectedConnection) return;
+    const points = routeNewWire(
+      selectedConnection.from,
+      selectedConnection.to,
+      wires.filter((wire) => wire.id !== selectedConnection.id),
+    ).slice(1, -1);
+    if (JSON.stringify(points) === JSON.stringify(selectedConnection.points)) return;
+    commit(wires.map((wire) => (wire.id === selectedConnection.id ? { ...wire, points } : wire)));
+    log(message('ui.log.wireRouted'));
+  };
   const activeCount = Object.values(result.coils).filter(Boolean).length;
   return (
     <div
       ref={fullscreenRef}
       className={`app ${nav ? '' : 'nav-hidden'} ${expanded ? 'bench-expanded' : ''}`}
+      onKeyDownCapture={(event) => {
+        // Close this non-modal panel before the document-level fullscreen shortcut.
+        // Menus and dialogs retain their own Escape handling.
+        if (
+          event.key === 'Escape' &&
+          (expanded || (stepMode && window.innerWidth <= 920)) &&
+          inspectorOpen &&
+          !modal &&
+          !(event.target instanceof Element && event.target.closest('[role="menu"]'))
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
+          closeInspector();
+        }
+      }}
     >
       <header className="app-header">
         <button
@@ -428,7 +544,7 @@ export default function App() {
         </div>
         <div className="header-actions">
           <ThemeToggle />
-          <LanguageMenu />
+          <LanguageToggle />
           <span
             className={`save-status ${saveState}`}
             title={
@@ -518,7 +634,7 @@ export default function App() {
             {EXAMPLES.map((ex, i) => (
               <button
                 key={ex.id}
-                disabled={powered && activeExample !== ex.id}
+                disabled={editLocked && activeExample !== ex.id}
                 aria-pressed={activeExample === ex.id}
                 className={`example-card ${activeExample === ex.id ? 'chosen' : ''}`}
                 onClick={() => (activeExample === ex.id ? exitExample() : loadExample(ex.id))}
@@ -560,7 +676,7 @@ export default function App() {
                 }}
               >
                 <span
-                  className={`inventory-dot ${result.coils[d.id] || result.lamps[d.id] || inputs[d.id] ? 'active' : ''}`}
+                  className={`inventory-dot ${displayed.result.coils[d.id] || displayed.result.lamps[d.id] || displayed.inputs[d.id] ? 'active' : ''}`}
                 />
                 <code>{d.id === 'ESTOP' ? 'E-STOP' : d.id}</code>
                 <span>{localizeDevice(d, locale).replace(/ [123]$/, '')}</span>
@@ -600,7 +716,11 @@ export default function App() {
           )}
           <div className="toolbar">
             <div className="toolbar-primary">
-              <button className={`power-button ${powered ? 'powered' : ''}`} onClick={togglePower}>
+              <button
+                className={`power-button ${powered ? 'powered' : ''}`}
+                disabled={viewingHistory}
+                onClick={togglePower}
+              >
                 {powered ? <Square size={14} fill="currentColor" /> : <Power size={16} />}
                 <span>{powered ? t('ui.action.powerOff') : t('ui.action.powerOn')}</span>
               </button>
@@ -616,15 +736,46 @@ export default function App() {
                       : t('ui.mode.tool')}
                 </span>
               </div>
-              <ColorPicker value={color} disabled={powered} onChange={setColor} />
+              <ColorPicker value={color} disabled={editLocked} onChange={setColor} />
             </div>
             <div className="toolbar-actions">
+              <button
+                className={`view-button ${stepMode ? 'toggled' : ''}`}
+                aria-pressed={stepMode}
+                title={t('learning.modeHint')}
+                onClick={() => {
+                  cancel();
+                  releaseMomentary();
+                  selectSnapshot(null);
+                  setStepMode(!stepMode);
+                  if (!stepMode) {
+                    setTraceTarget(observationTarget(wires, selected));
+                    setInspectorOpen(true);
+                  }
+                }}
+              >
+                <Footprints size={16} />
+                <span>{t('learning.mode')}</span>
+              </button>
               {expanded && <ThemeToggle />}
-              {expanded && <LanguageMenu />}
+              {expanded && <LanguageToggle />}
+              {expanded && (
+                <button
+                  ref={inspectorToggleRef}
+                  className={`icon-button inspector-toggle ${inspectorOpen ? 'toggled' : ''}`}
+                  aria-label={t(inspectorOpen ? 'ui.inspection.close' : 'ui.inspection.open')}
+                  title={t(inspectorOpen ? 'ui.inspection.close' : 'ui.inspection.open')}
+                  aria-expanded={inspectorOpen}
+                  aria-controls="bench-inspector"
+                  onClick={() => (inspectorOpen ? closeInspector() : setInspectorOpen(true))}
+                >
+                  {inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+                </button>
+              )}
               <button
                 className="icon-button"
                 aria-label={t('ui.action.undo')}
-                disabled={powered || !history.past.length}
+                disabled={editLocked || !history.past.length}
                 onClick={undo}
               >
                 <Undo2 size={16} />
@@ -632,12 +783,21 @@ export default function App() {
               <button
                 className="icon-button"
                 aria-label={t('ui.action.redo')}
-                disabled={powered || !history.future.length}
+                disabled={editLocked || !history.future.length}
                 onClick={redo}
               >
                 <Redo2 size={16} />
               </button>
               <span className="toolbar-divider" />
+              <button
+                className="icon-button"
+                aria-label={t('ui.action.arrangeWires')}
+                title={t('ui.action.arrangeWiresHint')}
+                disabled={editLocked || !!pending || !canArrange}
+                onClick={arrangeWires}
+              >
+                <Route size={16} />
+              </button>
               <button
                 className={`icon-button ${fixed ? 'toggled' : ''}`}
                 aria-label={fixed ? t('ui.action.dimFixed') : t('ui.action.showFixed')}
@@ -657,7 +817,7 @@ export default function App() {
               <button
                 className="icon-button"
                 aria-label={t('ui.action.import')}
-                disabled={powered}
+                disabled={editLocked}
                 onClick={() => importInput.current?.click()}
               >
                 <Upload size={16} />
@@ -674,31 +834,55 @@ export default function App() {
               </button>
             </div>
           </div>
-          {result.fault && (
+          {stepMode && (
+            <div className={`observation-bar ${viewingHistory ? 'is-history' : ''}`} role="status">
+              <span>{t(viewingHistory ? 'learning.historyReadonly' : 'learning.modeHint')}</span>
+              <div className="observation-bar-actions">
+                {viewingHistory && (
+                  <button className="view-button" onClick={() => selectSnapshot(null)}>
+                    {t('learning.backToLive')}
+                  </button>
+                )}
+                <button
+                  ref={observationToggleRef}
+                  className="view-button"
+                  aria-controls="bench-inspector"
+                  title={t('learning.inspect')}
+                  onClick={() => setInspectorOpen(true)}
+                >
+                  {t('learning.traceTarget', { id: traceTarget })}
+                </button>
+              </div>
+            </div>
+          )}
+          {displayed.result.fault && (
             <div className="fault-banner" role="alert">
               <Zap size={17} />
               <div>
                 <strong>
-                  {result.fault.kind === 'short'
+                  {displayed.result.fault.kind === 'short'
                     ? t('ui.fault.short')
-                    : result.fault.kind === 'unstable'
+                    : displayed.result.fault.kind === 'unstable'
                       ? t('ui.fault.unstable')
                       : t('ui.fault.unsupported')}
                 </strong>
                 <span>
-                  {localizeFault(result.fault, locale)} {t('ui.fault.stopped')}
+                  {localizeFault(displayed.result.fault, locale)} {t('ui.fault.stopped')}
                 </span>
               </div>
-              <button onClick={() => setPower(false)}>
+              <button disabled={viewingHistory} onClick={() => setPower(false)}>
                 {t('ui.fault.check')} <ArrowRight size={14} />
               </button>
             </div>
           )}
           <Bench
             wires={wires}
-            inputs={inputs}
-            result={result}
-            powered={powered}
+            inputs={displayed.inputs}
+            result={displayed.result}
+            powered={displayed.powered}
+            stepMode={stepMode}
+            readOnly={viewingHistory}
+            trace={stepMode && traceVisible ? trace : null}
             selected={selectedWire ? null : selected}
             selectedWire={selectedWire}
             pending={pending}
@@ -724,7 +908,7 @@ export default function App() {
               setRoute((r) => (r.length < PROJECT_LIMITS.maxPoints ? [...r, point] : r))
             }
             onMoveWire={(id, points) => {
-              if (!powered) commit(wires.map((w) => (w.id === id ? { ...w, points } : w)));
+              if (!editLocked) commit(wires.map((w) => (w.id === id ? { ...w, points } : w)));
             }}
             onCancel={cancel}
             onMode={(m) => {
@@ -733,35 +917,106 @@ export default function App() {
             }}
           />
           <footer className="canvas-footer">
-            <span className={powered ? 'online' : ''}>
-              <i />
-              {powered
-                ? result.fault
-                  ? t('ui.footer.stopped')
-                  : t('ui.footer.powered')
-                : t('ui.footer.editable')}
-            </span>
-            <span>
-              <Cable size={13} />
-              {t(wires.length === 1 ? 'ui.footer.wire' : 'ui.footer.wires', {
-                count: wires.length,
-              })}
-            </span>
-            <span>{t('ui.footer.terminals', { count: TERMINAL_IDS.length })}</span>
-            <span className="footer-help">
-              {t('ui.footer.zoom')} <b>·</b> {t('ui.footer.pan')} <b>·</b> {t('ui.footer.cancel')}
-            </span>
+            {selectedConnection ? (
+              <div className="connection-summary" aria-label={t('ui.inspection.connection')}>
+                <div className="connection-summary-endpoints" role="status">
+                  <i style={{ backgroundColor: selectedConnection.color }} aria-hidden="true" />
+                  <span className="connection-summary-label">
+                    {t('ui.inspection.selectedWire')}
+                  </span>
+                  <b className="connection-endpoint-label">A</b>
+                  <code>{selectedConnection.from}</code>
+                  <span aria-hidden="true">—</span>
+                  <b className="connection-endpoint-label">B</b>
+                  <code>{selectedConnection.to}</code>
+                </div>
+                <div className="connection-summary-actions">
+                  {expanded && !inspectorOpen && (
+                    <button
+                      className="view-button"
+                      aria-label={t('ui.inspection.details')}
+                      aria-controls="bench-inspector"
+                      aria-expanded={inspectorOpen}
+                      onClick={() => setInspectorOpen(true)}
+                    >
+                      <PanelRightOpen size={14} />
+                      <span>{t('ui.inspection.details')}</span>
+                    </button>
+                  )}
+                  <button
+                    className="icon-button"
+                    aria-label={t('ui.inspection.clearSelection')}
+                    onClick={() => setSelectedWire(null)}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <span className={powered ? 'online' : ''}>
+                  <i />
+                  {viewingHistory
+                    ? t('learning.historyReadonly')
+                    : powered
+                      ? result.fault
+                        ? t('ui.footer.stopped')
+                        : t('ui.footer.powered')
+                      : t('ui.footer.editable')}
+                </span>
+                <span>
+                  <Cable size={13} />
+                  {t(wires.length === 1 ? 'ui.footer.wire' : 'ui.footer.wires', {
+                    count: wires.length,
+                  })}
+                </span>
+                <span>{t('ui.footer.terminals', { count: TERMINAL_IDS.length })}</span>
+                <span className="footer-help">
+                  {t('ui.footer.zoom')} <b>·</b> {t('ui.footer.pan')} <b>·</b>{' '}
+                  {t('ui.footer.cancel')}
+                </span>
+              </>
+            )}
           </footer>
         </main>
         <Inspector
+          panelRef={inspectorRef}
+          compact={expanded}
+          hidden={expanded && !inspectorOpen}
+          onClose={expanded || (stepMode && inspectorOpen) ? closeInspector : undefined}
+          learningOpen={stepMode && inspectorOpen}
+          stepMode={stepMode}
+          readOnly={viewingHistory}
+          learning={
+            stepMode ? (
+              <ObservationPanel
+                trace={trace}
+                previousTrace={previousTrace}
+                snapshots={snapshots}
+                selectedSnapshotId={selectedSnapshotId}
+                displayed={displayed}
+                previousDisplayed={previousDisplayed}
+                onSelectSnapshot={(id) => {
+                  cancel();
+                  selectSnapshot(id);
+                }}
+                onLoadChange={setTraceTarget}
+                traceVisible={traceVisible}
+                onTraceVisibleChange={setTraceVisible}
+              />
+            ) : undefined
+          }
           selected={selected}
-          wire={wires.find((w) => w.id === selectedWire)}
-          inputs={inputs}
-          result={result}
-          powered={powered}
+          wire={selectedConnection}
+          inputs={displayed.inputs}
+          result={displayed.result}
+          powered={displayed.powered}
           events={events.map(renderMessage)}
-          onWireChange={(next) => commit(wires.map((w) => (w.id === next.id ? next : w)))}
+          onWireChange={(next) => {
+            if (!editLocked) commit(wires.map((w) => (w.id === next.id ? next : w)));
+          }}
           onRemoveWire={removeWire}
+          onRouteWire={rerouteWire}
           onOperate={operate}
         />
       </div>
@@ -770,9 +1025,11 @@ export default function App() {
           <span className="status-dot" /> {t('ui.footer.local')}
         </span>
         <span>
-          {powered
-            ? t(activeCount === 1 ? 'ui.footer.coil' : 'ui.footer.coils', { count: activeCount })
-            : t('ui.footer.ready')}
+          {viewingHistory
+            ? t('learning.historyReadonly')
+            : powered
+              ? t(activeCount === 1 ? 'ui.footer.coil' : 'ui.footer.coils', { count: activeCount })
+              : t('ui.footer.ready')}
         </span>
         <span>
           WireBench 2D <span className="bottom-version">v{APP_VERSION}</span>
@@ -876,6 +1133,11 @@ export default function App() {
                     <span>03</span>
                     <h3>{t('ui.guide.operateTitle')}</h3>
                     <p>{t('ui.guide.operateDescription')}</p>
+                  </div>
+                  <div>
+                    <span>04</span>
+                    <h3>{t('learning.mode')}</h3>
+                    <p>{t('learning.guide')}</p>
                   </div>
                 </div>
                 <div className="help-callout">

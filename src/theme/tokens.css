@@ -46,11 +46,15 @@
   --fixed-wire: #96a298;
   --fixed-wire-power: #949f76;
   --wire-halo: #f0f2e9;
+  --wire-selection: #086e80;
+  --learning-trace: #8355bb;
+  --on-wire-selection: #ffffff;
   /* Terminal plastic stays pale in both themes, so its focus ring stays dark. */
   --terminal-focus: #126546;
 }
 
 :root[data-theme='dark'] {
+  --learning-trace: #c19df2;
   --lamp-panel-top: #d8e0e2;
   --lamp-panel-bottom: #aab9bf;
   --lamp-panel-ink: #263b45;
@@ -97,4 +101,6 @@
   --fixed-wire: #82949f;
   --fixed-wire-power: #9ea89b;
   --wire-halo: #9baeb9;
+  --wire-selection: #7fddf3;
+  --on-wire-selection: #112e39;
 }

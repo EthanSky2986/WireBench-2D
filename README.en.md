@@ -4,7 +4,7 @@
 
 A two-dimensional electrical training bench in your browser. Device leads are already connected to terminal strips. Draw wires between terminals, operate buttons and switches, and watch contactors and indicator lamps respond to the circuit you build.
 
-**Open-source teaching preview: [v0.1.1-alpha](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.1.1-alpha) (2026-10-01).** Code uses the MIT license; the public repository excludes original reference images. The current model supports basic control-circuit practice; it does not calculate physical voltage, current, or motor motion.
+**Open-source teaching preview: [v0.2.0-alpha](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.2.0-alpha) (2026-10-04).** Code uses the MIT license; the public repository excludes original reference images. The current model supports basic control-circuit practice; it does not calculate physical voltage, current, or motor motion.
 
 ![Refined workbench: protection test in English, light theme](docs/screenshots/lamp-panel-light-trip.png)
 
@@ -12,7 +12,8 @@ A two-dimensional electrical training bench in your browser. Device leads are al
 
 - 16 device definitions and 113 selectable terminals; refined artwork throughout the main bench and device inspector. Three lamps share a vertical panel and six-position terminal bank; SB controls align with their terminal groups.
 - Three editable examples: button-controlled lamp, contactor jogging, and self-holding start/stop. An empty workspace supports independent wiring.
-- Wire drawing, selection, colors, draggable bends, deletion, undo, and redo. Cycle overlapping wires; a selected wire pulses slowly and marks its endpoints.
+- Wire drawing, selection, colors, draggable bends, deletion, undo, and redo. New routes seek separate lanes; older routes can be arranged explicitly. Cycle overlapping wires; the selected wire stays clear with A/B endpoint marks.
+- Optional **Step observation**: press and release buttons separately, review action snapshots and state changes, and keep tracing the supply and return paths of a chosen coil or lamp.
 - Short-circuit and unstable-circuit messages, overload relay tests, emergency stop, and normally open/closed contact behavior.
 - Complete Simplified Chinese and English interfaces, light/dark themes, a compact header, collapsible navigation, zoom, pan, and full screen.
 - Browser-local autosave for your own workspace, validated JSON import, file export, and protection against overwriting damaged saved projects.
@@ -21,7 +22,7 @@ No account or backend is required. Installing dependencies needs internet access
 
 ## Run locally
 
-Download and extract the source from the [v0.1.1-alpha release page](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.1.1-alpha), or clone the repository. The application is available for local use after download; there is no hosted online demo.
+Download and extract the source from the [v0.2.0-alpha release page](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.2.0-alpha), or clone the repository. The application is available for local use after download; there is no hosted online demo.
 
 Install Node.js **22.12+** and npm; Node.js **24 LTS** is recommended. In the project directory:
 
@@ -45,13 +46,18 @@ On macOS, you can also double-click **启动实验台.command**. If macOS does n
 
 Examples contain ordinary wire data rather than preset simulation results. Turn off power, remove a necessary wire, and power on again: the result changes with the actual circuit.
 
+For a closer look, enable **Step observation** in the toolbar. Click SB2 to press, then click again to release. Select KM1 in the inspector to compare the starting branch with the holding path that remains closed. Any coil or lamp can be inspected. Purple outlines identify valid supply and return paths, including parallel branches; they do not represent measured current.
+
+History is read-only. Choose **Return to live run** before operating again. Leaving the window automatically releases momentary buttons and records the reason. Up to 120 actions are kept for the current wiring revision; rewiring, resetting, or refreshing clears them. Wiring undo history remains separate.
+
 ## Controls
 
 | Action                     | How                                                                                                                                                              |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Draw a wire                | With power off, click the starting and destination terminals; click empty space, an existing wire, or a device body along the way to add bends                   |
 | Cancel a pending wire      | Press Esc or use the cancel control                                                                                                                              |
-| Adjust routing             | Select a wire and drag its circular bend handles                                                                                                                 |
+| Adjust routing             | Select a wire and drag its circular bend handles; **Reroute wire** replans that wire and can be undone                                                           |
+| Arrange older routes       | **Arrange automatic wires** in the toolbar arranges only wires without a saved route; existing bends stay unchanged. Undo is available                           |
 | Identify overlapping wires | Click the same position repeatedly or select **Next wire**; the selected wire moves visually to the front and marks its endpoints while other ordinary wires dim |
 | Change color / delete      | Select a wire and use the inspector; Delete also removes it                                                                                                      |
 | Undo / redo                | Toolbar, ⌘/Ctrl+Z, or ⌘/Ctrl+Shift+Z                                                                                                                             |
@@ -59,16 +65,16 @@ Examples contain ordinary wire data rather than preset simulation results. Turn 
 | Momentary pushbutton       | Hold to activate and release to reset; focused buttons also support Space/Enter                                                                                  |
 | SQ, emergency stop         | Click to activate, click again to reset                                                                                                                          |
 | FR overload relay          | Body opens details; TEST trips, RESET resets. Current adjustment is not simulated.                                                                               |
-| Reset operating state      | **Reset → Reset operating state** beside power; powers off and resets inputs and faults, retaining wiring and history                                            |
+| Reset operating state      | **Reset → Reset operating state** beside power; powers off and resets inputs and faults, retaining wiring and wiring undo history                                |
 | Clear wiring               | **Reset → Clear all wiring**, then confirm; keeps the name and current exercise and can be undone                                                                |
 | Exit an example            | Select **Exit experiment**, click the selected example again, or choose **My workspace**                                                                         |
 | Save / import / export     | Your own workspace autosaves; export from the toolbar or import a `.wirebench.json` file with power off                                                          |
-| Language / theme           | Language icon opens a menu; appearance icon switches theme directly; both move to the toolbar in full screen                                                     |
+| Language / theme           | EN switches to English; 中 switches to Chinese; the appearance icon switches theme directly; both move to the toolbar in full screen                             |
 | Full screen / navigation   | Enter full screen from the toolbar; Esc or the exit control restores it; navigation and its groups can collapse independently                                    |
 
-Full screen preserves the circuit and running state. If native full screen is unavailable, the bench fills the page and displays a notice. The system's reduced-motion preference disables wire pulsing while retaining static selection marks.
+Full screen preserves the circuit and running state. Open the inspector from its toolbar to view contacts, change wire colors, reroute, or delete wires; wiring edits remain locked while powered. If native full screen is unavailable, the bench fills the page and displays a notice. The selected wire stays continuously visible while only its outer halo pulses; the system's reduced-motion preference disables that animation.
 
-Wire crossings, overlaps, and routes passing over terminals do not connect them: only each wire's endpoints create an electrical connection. Color, route, and fixed-lead visibility do not affect simulation.
+Wire crossings, overlaps, and routes passing over terminals do not connect them: only each wire's endpoints create an electrical connection. Small crossing gaps distinguish overlapping layers; they do not mean a broken wire. A/B mark endpoints, not current direction. Color, route, and fixed-lead visibility do not affect simulation.
 
 ## Saving and recovery
 
@@ -93,7 +99,7 @@ Devices include KM1–KM3 with LANN22 auxiliary contacts, FR1–FR2, SQ1–SQ2, 
 
 `POWER:L/N` represents logical supply rails. An FR test does not directly open its three-phase through paths; the emergency stop is not a global power switch. Unsupported arrangements produce a message; simulation results do not establish that physical wiring is safe.
 
-Refined devices are in the main bench. **Rounded wires remain exclusive to the material study.** Open it through the sidebar or `/?preview=materials` after starting the app. The study runs independently without reading or writing your workspace. Main-bench routes do not yet separate lanes or avoid collisions automatically; see the [visual guidelines](docs/VISUAL_STYLE.md).
+Refined devices are in the main bench. **Rounded wires remain exclusive to the material study.** Open it through the sidebar or `/?preview=materials` after starting the app. The study runs independently without reading or writing your workspace. New main-bench wires seek clear lanes around devices and other wires, then keep their saved route. Opening older files does not move their wires. Dense wiring can still have crossings or short shared runs; see the [visual guidelines](docs/VISUAL_STYLE.md).
 
 ## Development and feedback
 
@@ -114,7 +120,7 @@ Detailed architecture and development documents are currently in Chinese. The co
 
 ## Repository and licensing status
 
-The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v0.1.1-alpha` teaching preview. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
+The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v0.2.0-alpha` teaching preview. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
 
 An independent classroom trial by a teacher or student remains pending. Follow the example steps above and report reproducible feedback; the current scope and limitations are described above.
 

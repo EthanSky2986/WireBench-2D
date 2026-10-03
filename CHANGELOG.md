@@ -1,5 +1,32 @@
 # Changelog / 变更记录
 
+## v0.2.0-alpha — 2026-10-04
+
+### Added / 新增
+
+- 可选分步观察：按下和松开分别记录为动作快照；最多保留当前接线修订的 120 条记录。历史只读，不恢复过去的输入或线圈状态。
+- 选择任意线圈或灯，持续查看由实际接线计算的供电与回线，包含有效并联支路及其中的闭合触点；对比操作前后的状态和通路变化。排除悬空分支，不把电源连接误称为实测电流。
+- 观察历史时保留查看通路的入口；窄窗口抽屉关闭后恢复打开按钮的键盘焦点。
+
+English: Optional step observation records press and release independently, with up to 120 read-only snapshots per wiring revision. Select any coil or lamp to trace valid supply and return paths, including parallel branches and closed contacts, then compare changes between actions. Reviewing history never restores past inputs or relay memory. The path panel remains accessible during history review, and closing its narrow-window drawer restores keyboard focus.
+
+### Improved / 改进
+
+- 新线路自动规划并固定路径，示例打开时整理走线；旧线路可主动整理，单根线路可重新规划，均支持撤销并保留电气拓扑。
+- 交叉处显示间隙、选中线置顶及 A/B 端点标记，重叠线可轮换选择。保留线身颜色，仅外圈缓慢变化。
+- 全屏可打开器件与导线详情；中英文改为一键切换，正式实验台与视觉小样共用。
+- 补充双语使用说明、架构及国际化约定；增加可选赞助说明页。修正本地公开快照导出工具的作者身份，避免误关联其他账号。
+
+English: New wires keep their planned routes; examples open with arranged wiring, while existing paths change only through explicit, undoable actions. Crossing gaps, a continuous selected wire and A/B markers improve readability. Full-screen inspection and one-click language switching are available throughout the app. Bilingual documentation and optional support pages are included; local public snapshot exports no longer use an identity associated with another account.
+
+### Compatibility and scope / 兼容性与范围
+
+- 设备、端子标识及 v1 接线文件格式不变。观察记录保存在内存，修改接线、复位或刷新后清除；接线撤销历史独立管理。
+- 仍为理想通断模型，不计算实际电压、电流或吸合时间。“先预测再揭晓”和分级提示排故练习尚未实现。
+- 自动检查覆盖 203 项测试；独立课堂试用、完整跨浏览器与移动触控、500 根线的交互性能仍待验证。
+
+English: Electrical IDs and the v1 project format are unchanged. Observation history is transient and resets with wiring changes, reset, or refresh; wiring undo remains separate. The model does not calculate physical voltage, current, or actuation time. Prediction/reveal and guided fault exercises are future work. Automated coverage includes 203 tests; independent classroom trials, full browser/touch coverage and interactive performance at 500 wires remain unverified.
+
 ## v0.1.1-alpha — 2026-10-01
 
 - 将“接线实验台”标题移至顶部品牌栏，移除重复的大标题区，为普通视图增加画布高度。1280×720 窗口实测增加 101 像素；全屏入口保留。

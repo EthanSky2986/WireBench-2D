@@ -3,7 +3,7 @@ import { ArrowLeft, CircuitBoard, Maximize, Minimize, Power, Square } from 'luci
 import { DeviceArt } from '../components/DeviceArt';
 import { RefinedDeviceArt } from '../components/RefinedDeviceArt';
 import { WirePath } from '../components/WirePath';
-import LanguageMenu from '../components/LanguageMenu';
+import LanguageToggle from '../components/LanguageToggle';
 import ThemeToggle from '../components/ThemeToggle';
 import { roundedWirePath } from '../rendering/wireGeometry';
 import { useSimulation } from '../hooks/useSimulation';
@@ -364,7 +364,7 @@ export default function VisualPreview() {
           <span>{t('preview.study')}</span>
         </a>
         <div className="preview-header-actions">
-          <LanguageMenu />
+          <LanguageToggle />
           <ThemeToggle />
           <button
             className="preview-fullscreen"

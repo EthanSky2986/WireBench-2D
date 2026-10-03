@@ -1,29 +1,39 @@
 import { useCallback, useEffect, useReducer } from 'react';
 import type { Wire } from '../sim/model';
-import { createSimulationState, simulationReducer } from '../sim/simulationState';
+import {
+  createObservationState,
+  observationReducer,
+  observationView,
+} from '../sim/observationState';
+import type { ObservationSnapshot, ObservationView } from '../sim/observationState';
 import type { SimulationState } from '../sim/simulationState';
 
-export interface SimulationController extends Pick<
-  SimulationState,
-  'powered' | 'inputs' | 'result'
-> {
+export interface SimulationController
+  extends Pick<SimulationState, 'powered' | 'inputs' | 'result'>, ObservationView {
   operate: (deviceId: string, active: boolean) => void;
   setPower: (powered: boolean) => void;
   resetSimulation: (wires: Wire[]) => void;
+  snapshots: ObservationSnapshot[];
+  selectedSnapshotId: number | null;
+  selectSnapshot: (id: number | null) => void;
+  releaseMomentary: () => void;
 }
 
 /** Browser lifecycle events are translated into the same tested domain events. */
 export function useSimulation(wires: Wire[]): SimulationController {
-  const [state, dispatch] = useReducer(simulationReducer, wires, createSimulationState);
+  const [state, dispatch] = useReducer(observationReducer, wires, createObservationState);
 
-  useEffect(() => {
+  // Adjust before children commit: an effect would briefly expose old traces
+  // on a newly edited/imported wiring revision. The identity guard converges
+  // after one render and the reducer disarms the run at this same boundary.
+  if (state.current.wires !== wires) {
     dispatch({ type: 'replace-wires', wires });
-  }, [wires]);
+  }
 
   useEffect(() => {
-    const release = () => dispatch({ type: 'release-momentary' });
+    const release = () => dispatch({ type: 'release-momentary', reason: 'blur' });
     const visibility = () => {
-      if (document.hidden) release();
+      if (document.hidden) dispatch({ type: 'release-momentary', reason: 'hidden' });
     };
     window.addEventListener('blur', release);
     document.addEventListener('visibilitychange', visibility);
@@ -42,13 +52,24 @@ export function useSimulation(wires: Wire[]): SimulationController {
   const resetSimulation = useCallback((nextWires: Wire[]) => {
     dispatch({ type: 'reset', wires: nextWires });
   }, []);
+  const selectSnapshot = useCallback((id: number | null) => {
+    dispatch({ type: 'select-snapshot', id });
+  }, []);
+  const releaseMomentary = useCallback(() => {
+    dispatch({ type: 'release-momentary', reason: 'mode-change' });
+  }, []);
 
   return {
-    powered: state.powered,
-    inputs: state.inputs,
-    result: state.result,
+    powered: state.current.powered,
+    inputs: state.current.inputs,
+    result: state.current.result,
     operate,
     setPower,
     resetSimulation,
+    snapshots: state.snapshots,
+    selectedSnapshotId: state.selectedSnapshotId,
+    selectSnapshot,
+    releaseMomentary,
+    ...observationView(state),
   };
 }
