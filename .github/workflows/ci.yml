@@ -8,6 +8,16 @@ permissions:
   contents: read
 
 jobs:
+  identities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+      - run: node scripts/check-git-identities.mjs --history
   verify:
     strategy:
       fail-fast: false

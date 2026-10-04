@@ -4,6 +4,16 @@
 
 ## 日常命令
 
+### 提交身份
+
+请使用关联到你自己 GitHub 账号的邮箱，不要复制别人的 noreply 地址。`npm run check:identities` 会检查当前分支、远端跟踪分支和标签中可达提交的原始作者、提交者及共同作者信息；不扫描仅供恢复的 reflog。CI 使用完整历史运行同一检查。它针对已经发生过的错误地址，不限制正常贡献者，也不拒绝 GitHub 的网页提交身份。
+
+本地可以用 `git config --local core.hooksPath .githooks` 启用提交前与推送前检查。若已配置其他 hooks，请先将检查整合到现有流程，避免覆盖。推送检查会验证本次推送各个分支或标签的完整祖先历史；`--no-verify` 可以绕过本地 hooks，因此服务端检查仍需保留。
+
+GitHub 的旧 PR 引用和缓存不属于本地分支。即使当前分支检查通过，也不能据此声称旧提交已从 GitHub 完全清除；必要时应把具体 PR 引用和提交 SHA 交给 GitHub Support 核查。
+
+### 开发运行
+
 在项目根目录使用支持当前 Vite 的 Node.js LTS 和 npm。已有锁文件时优先 `npm ci`；有意调整依赖后运行 `npm install` 并保留锁文件变更。
 
 ```sh

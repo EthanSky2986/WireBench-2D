@@ -10,6 +10,7 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check:identities": "node scripts/check-git-identities.mjs --history",
     "check": "npm run format:check && npm run build && npm test",
     "prepare:public": "node scripts/create-public-candidate.mjs"
   },
