@@ -88,16 +88,17 @@ Export has been verified locally to download an actual file with the correct nam
 
 ## Model scope and known limitations
 
-Devices include KM1–KM3 with LANN22 auxiliary contacts, FR1–FR2, SQ1–SQ2, SB1–SB3, an emergency stop, HL1–HL3, a teaching supply, and a reserved motor terminal area.
+Devices include KM1–KM3 with LANN22 auxiliary contacts, FR1–FR2, SQ1–SQ2, SB1–SB3, an emergency stop, HL1–HL3, a teaching supply, and a three-phase motor terminal box.
 
-| Supported                                                                                                 | Not simulated or not yet verified                                                                                   |
-| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Ideal normally open/closed contacts, jogging, self-holding, stop circuits, and independent parallel loads | Physical voltage, current, coil ratings, frequency, and pickup thresholds                                           |
-| Emergency stop when wired into a circuit; FR tests switch auxiliary contacts                              | Three-phase power and motor motion, voltage division across series loads, temperature rise, and thermal trip timing |
-| Explicit short-circuit, unstable-circuit, and unsupported-arrangement messages                            | Real terminal wire capacity and engineering validation of physical wiring                                           |
-| Core desktop-browser interactions tested locally                                                          | Full cross-browser coverage, touch/mobile use, and performance with 500 wires                                       |
+| Supported                                                                                                             | Not simulated or not yet verified                                             |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Ideal normally open/closed contacts, jogging, self-holding, stop circuits, and independent parallel loads             | Physical voltage, current, coil ratings, frequency, and pickup thresholds     |
+| Emergency stop when wired into a circuit; FR tests switch auxiliary contacts                                          | Motor direction, speed and torque; temperature rise and thermal trip timing   |
+| Three-phase training supply with phase-to-phase short localization; motor running when every winding spans two phases | Voltage division across series loads, current settings, and real trip curves  |
+| Explicit short-circuit, unstable-circuit, and unsupported-arrangement messages                                        | Real terminal wire capacity and engineering validation of physical wiring     |
+| Core desktop-browser interactions tested locally                                                                      | Full cross-browser coverage, touch/mobile use, and performance with 500 wires |
 
-`POWER:L/N` represents logical supply rails. An FR test does not directly open its three-phase through paths; the emergency stop is not a global power switch. Unsupported arrangements produce a message; simulation results do not establish that physical wiring is safe.
+`POWER:L/N` and `POWER:U2/V2/W2` describe connectivity only: L/N is the single-phase control supply and U/V/W the three-phase teaching supply rated 380 V line-to-line, and neither reflects measured voltage or current. A running motor means all three windings span two different phases, not a direction or a speed; Y and delta are wired by the user and are not modelled separately. An FR test does not directly open its three-phase through paths; the emergency stop is not a global power switch. Unsupported arrangements produce a message; simulation results do not establish that physical wiring is safe.
 
 Refined devices are in the main bench. **Rounded wires remain exclusive to the material study.** Open it through the sidebar or `/?preview=materials` after starting the app. The study runs independently without reading or writing your workspace. New main-bench wires seek clear lanes around devices and other wires, then keep their saved route. Opening older files does not move their wires. Dense wiring can still have crossings or short shared runs; see the [visual guidelines](docs/VISUAL_STYLE.md).
 

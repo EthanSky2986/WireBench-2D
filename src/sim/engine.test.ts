@@ -379,14 +379,6 @@ describe('fault detection and useful localization', () => {
     expect(simulate(connect(['POWER:L', 'POWER:N']), {}, false).fault).toBeNull();
   });
 
-  it('rejects motor and three-phase reserved terminals explicitly', () => {
-    for (const terminal of ['POWER:U2', 'POWER:V2', 'POWER:W2', 'MOTOR:U1', 'MOTOR:U2']) {
-      const state = simulate(connect([terminal, 'KM1:L1']), {}, true);
-      expect(state.fault?.kind).toBe('unsupported');
-      expect(state.fault?.terminals).toContain(terminal);
-    }
-  });
-
   it('detects coil chatter caused by its own normally closed contact', () => {
     const state = simulate(
       connect(['POWER:L', 'KM1:61'], ['KM1:62', 'KM1:A1'], ['KM1:A2', 'POWER:N']),
@@ -402,5 +394,268 @@ describe('fault detection and useful localization', () => {
     const state = simulate(connect(['KM1:62', 'KM1:A1'], ['KM1:A2', 'POWER:N']), {}, true);
     expect(state.fault).toBeNull();
     expect(state.coils.KM1).toBe(false);
+  });
+});
+
+describe('three-phase main supply', () => {
+  it('accepts the three phase terminals instead of reporting a reserved area', () => {
+    for (const terminal of ['POWER:U2', 'POWER:V2', 'POWER:W2']) {
+      const state = simulate(connect([terminal, 'KM1:L1']), {}, true);
+      expect(state.fault).toBeNull();
+      expect(state.potential['KM1:L1']).toBe(terminal.slice(-2, -1));
+    }
+  });
+
+  it('keeps the three phase rails independent of each other', () => {
+    const state = simulate(
+      connect(['POWER:U2', 'KM1:L1'], ['POWER:V2', 'KM1:L2'], ['POWER:W2', 'KM1:L3']),
+      {},
+      true,
+    );
+    expect(state.fault).toBeNull();
+    expect(state.potential['KM1:L1']).toBe('U');
+    expect(state.potential['KM1:L2']).toBe('V');
+    expect(state.potential['KM1:L3']).toBe('W');
+    expect(state.potential['KM1:T1']).toBe('floating');
+  });
+
+  it.each([
+    ['U', 'V'],
+    ['V', 'W'],
+    ['U', 'W'],
+  ])('detects a %s-%s phase-to-phase short and locates the wire', (a, b) => {
+    const terminals = { U: 'POWER:U2', V: 'POWER:V2', W: 'POWER:W2' } as const;
+    const state = simulate(
+      connect([terminals[a as 'U'], 'KM1:L1'], [terminals[b as 'U'], 'KM1:L1']),
+      {},
+      true,
+    );
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.wireIds).toEqual(['w1', 'w2']);
+    expect(state.fault?.terminals).toEqual(expect.arrayContaining([terminals[a as 'U'], 'KM1:L1']));
+    expect(state.fault?.descriptor.code).toBe('message.fault.phase-short');
+    expect(state.coils.KM1).toBe(false);
+    expect(Object.values(state.lamps).some(Boolean)).toBe(false);
+  });
+
+  it('detects a phase-to-neutral short through a closed contact path', () => {
+    const state = simulate(
+      connect(
+        ['POWER:U2', 'KM1:L1'],
+        ['KM1:T1', 'POWER:N'],
+        ['POWER:V2', 'SB3:NO3'],
+        ['SB3:NO4', 'POWER:N'],
+      ),
+      { SB3: true },
+      true,
+    );
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.descriptor.code).toBe('message.fault.phase-neutral');
+  });
+
+  it('does not report a phase short merely because both terminals exist', () => {
+    const state = simulate(connect(['POWER:U2', 'KM1:L1'], ['POWER:V2', 'KM1:L2']), {}, true);
+    expect(state.fault).toBeNull();
+  });
+
+  it('keeps the original L-N short report, including its terminals and wire', () => {
+    const state = simulate(connect(['POWER:L', 'POWER:N'], ['POWER:U2', 'KM1:L1']), {}, true);
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.descriptor.code).toBe('message.fault.short');
+    expect(state.fault?.wireIds).toEqual(['w1']);
+    expect(state.fault?.terminals).toEqual(['POWER:L', 'POWER:N']);
+  });
+});
+
+describe('motor load', () => {
+  // U/V/W main circuit through KM1 with a user-wired star point on U2/V2/W2.
+  const yCircuit = (star: 'Y' | 'delta' | 'none' = 'Y', contactor: boolean = true): Wire[] => {
+    const main: [string, string][] = [
+      ['POWER:U2', 'KM1:L1'],
+      ['KM1:T1', 'MOTOR:U1'],
+      ['POWER:V2', 'KM1:L2'],
+      ['KM1:T2', 'MOTOR:V1'],
+      ['POWER:W2', 'KM1:L3'],
+      ['KM1:T3', 'MOTOR:W1'],
+    ];
+    const coil: [string, string][] = contactor
+      ? [
+          ['POWER:L', 'KM1:A1'],
+          ['KM1:A2', 'POWER:N'],
+        ]
+      : [];
+    const ends: [string, string][] =
+      star === 'Y'
+        ? [
+            ['MOTOR:U2', 'MOTOR:V2'],
+            ['MOTOR:V2', 'MOTOR:W2'],
+          ]
+        : star === 'delta'
+          ? [
+              ['MOTOR:U1', 'MOTOR:W2'],
+              ['MOTOR:V1', 'MOTOR:U2'],
+              ['MOTOR:W1', 'MOTOR:V2'],
+            ]
+          : [];
+    return connect(...main, ...coil, ...ends);
+  };
+
+  it('exposes the motor terminals instead of reporting a reserved area', () => {
+    const state = simulate(connect(['MOTOR:U1', 'POWER:U2']), {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('runs a Y-connected motor while the contactor holds, and stops when it releases', () => {
+    const running = simulate(yCircuit('Y'), {}, true);
+    expect(running.fault).toBeNull();
+    expect(running.coils.KM1).toBe(true);
+    expect(running.motors.MOTOR).toBe(true);
+    const stopped = simulate(yCircuit('Y', false), {}, true);
+    expect(stopped.coils.KM1).toBe(false);
+    expect(stopped.motors.MOTOR).toBe(false);
+  });
+
+  it('runs a delta-connected motor wired by the user', () => {
+    const state = simulate(yCircuit('delta'), {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(true);
+  });
+
+  it('does not run with a missing phase', () => {
+    const wires = yCircuit('Y').filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('does not run while both ends of a winding sit on the same potential', () => {
+    const wires = [
+      ...yCircuit('Y'),
+      { id: 'shunt', from: 'MOTOR:U1', to: 'MOTOR:U2', color: '#000' },
+    ];
+    const state = simulate(wires, {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('does not run from a single-phase L/N feed', () => {
+    const state = simulate(
+      connect(
+        ['POWER:L', 'KM1:A1'],
+        ['KM1:A2', 'POWER:N'],
+        ['POWER:L', 'MOTOR:U1'],
+        ['POWER:N', 'MOTOR:U2'],
+      ),
+      {},
+      true,
+    );
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('leaves L-N short detection and coil behaviour untouched', () => {
+    const state = simulate(
+      connect(['POWER:L', 'POWER:N'], ['POWER:U2', 'MOTOR:U1'], ['MOTOR:U2', 'MOTOR:V2']),
+      {},
+      true,
+    );
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.descriptor.code).toBe('message.fault.short');
+    expect(state.motors.MOTOR).toBe(false);
+  });
+});
+
+describe('contactor self-holding with a motor example', () => {
+  const wiresOfExample = () => example('motor-self-hold');
+
+  it('starts the motor through SB2, holds after release, and stops with SB1', () => {
+    const wires = wiresOfExample();
+    const initial = simulate(wires, {}, true);
+    expect(initial.fault).toBeNull();
+    expect(initial.coils.KM1).toBe(false);
+    expect(initial.motors.MOTOR).toBe(false);
+
+    const starting = simulate(wires, { SB2: true }, true, initial.coils);
+    expect(starting.coils.KM1).toBe(true);
+    expect(starting.motors.MOTOR).toBe(true);
+
+    const holding = simulate(wires, {}, true, starting.coils);
+    expect(holding.coils.KM1).toBe(true);
+    expect(holding.motors.MOTOR).toBe(true);
+
+    const stopped = simulate(wires, { SB1: true }, true, holding.coils);
+    expect(stopped.coils.KM1).toBe(false);
+    expect(stopped.motors.MOTOR).toBe(false);
+    expect(simulate(wires, {}, true, stopped.coils).motors.MOTOR).toBe(false);
+  });
+
+  it('cannot hold without the actual self-holding wire', () => {
+    const wires = wiresOfExample().filter((wire) => wire.from !== 'KM1:14');
+    const starting = simulate(wires, { SB2: true }, true);
+    expect(starting.motors.MOTOR).toBe(true);
+    const released = simulate(wires, {}, true, starting.coils);
+    expect(released.coils.KM1).toBe(false);
+    expect(released.motors.MOTOR).toBe(false);
+  });
+
+  it('runs through the same rules: removing a phase stops the motor', () => {
+    const wires = wiresOfExample().filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, { SB2: true }, true);
+    expect(state.fault).toBeNull();
+    expect(state.coils.KM1).toBe(true);
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('reports a phase short instead of running when two phases are joined', () => {
+    const wires = [
+      ...wiresOfExample(),
+      { id: 'cross', from: 'KM1:T1', to: 'KM1:T2', color: '#000' },
+    ];
+    const state = simulate(wires, { SB2: true }, true);
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.wireIds).toContain('cross');
+    expect(state.motors.MOTOR).toBe(false);
+  });
+});
+
+describe('motor needs three distinct phases', () => {
+  const main = (): [string, string][] => [
+    ['POWER:U2', 'KM1:L1'],
+    ['KM1:T1', 'MOTOR:U1'],
+    ['POWER:V2', 'KM1:L2'],
+    ['KM1:T2', 'MOTOR:V1'],
+    ['POWER:W2', 'KM1:L3'],
+    ['KM1:T3', 'MOTOR:W1'],
+    ['MOTOR:U2', 'MOTOR:V2'],
+    ['MOTOR:V2', 'MOTOR:W2'],
+    ['POWER:L', 'KM1:A1'],
+    ['KM1:A2', 'POWER:N'],
+  ];
+
+  it('does not run when all three main contacts are fed from one phase', () => {
+    const wires = connect(...main()).map((wire) =>
+      wire.from === 'POWER:V2' || wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:U2' } : wire,
+    );
+    const state = simulate(wires, {}, true);
+    expect(state.fault).toBeNull();
+    // Each winding does span a phase and the star point, so the windings report
+    // energized; only the missing phase rotation keeps the motor stopped.
+    expect(state.windings['MOTOR:U1']).toBe(true);
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('does not run when two phases are the same', () => {
+    const wires = connect(...main()).map((wire) =>
+      wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:V2' } : wire,
+    );
+    expect(simulate(wires, {}, true).motors.MOTOR).toBe(false);
+  });
+
+  it('still runs when all three phases are present', () => {
+    expect(simulate(connect(...main()), {}, true).motors.MOTOR).toBe(true);
   });
 });

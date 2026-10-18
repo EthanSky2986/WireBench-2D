@@ -67,7 +67,12 @@ export default function Inspector({
   const active = device
     ? device.kind === 'supply'
       ? powered
-      : !!(result.coils[device.id] || result.lamps[device.id] || inputs[device.id])
+      : !!(
+          result.coils[device.id] ||
+          result.lamps[device.id] ||
+          result.motors[device.id] ||
+          inputs[device.id]
+        )
     : false;
   const buttonId = !stepMode && !wire && device?.kind === 'button' ? device.id : null;
 
@@ -191,7 +196,9 @@ export default function Inspector({
                       ? t('inspector.tripped')
                       : t('inspector.normal')
                     : device.kind === 'motor'
-                      ? t('inspector.reserved')
+                      ? active
+                        ? t('inspector.motorRunning')
+                        : t('inspector.motorStopped')
                       : device.kind === 'supply'
                         ? powered
                           ? t('inspector.powered')

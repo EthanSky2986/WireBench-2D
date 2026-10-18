@@ -83,3 +83,52 @@
     --refined-transition: 0ms;
   }
 }
+
+/* A running motor turns its fan; a stopped one keeps it still. */
+.motor-fan.is-running {
+  animation: motor-fan-spin 0.9s linear infinite;
+}
+
+.motor-indicator {
+  opacity: 0.18;
+  transition: opacity var(--refined-transition);
+}
+
+/* The material preview also renders the classic DeviceArt motor, so the
+   running state is driven by the artwork root rather than one variant class. */
+:is(.refined-device-art, .device-art).is-active .motor-indicator,
+.device-preview.active .motor-indicator {
+  opacity: 1;
+}
+
+@keyframes motor-fan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motor-fan.is-running {
+    animation: none;
+  }
+}
+
+/* Auxiliary contact numbers and silkscreen must stay legible at bench scale. */
+.refined-device-art .refined-contact-number {
+  fill: #d7dfe2;
+  font-size: 5.2px;
+}
+
+.refined-device-art .refined-silkscreen {
+  fill: #e2e7e9;
+}
+
+/* A running contactor shows its amber window and a soft coil glow. */
+.refined-device-art--contactor .refined-coil-window {
+  opacity: 0;
+  transition: opacity var(--refined-transition);
+}
+
+.refined-device-art--contactor.is-active .refined-coil-window {
+  opacity: 1;
+}

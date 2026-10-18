@@ -30,6 +30,25 @@ describe('event-driven simulation state', () => {
     expect(run(running, press('SB1'), release('SB1')).result.coils.KM1).toBe(false);
   });
 
+  it('starts and stops a motor with the contactor that feeds it', () => {
+    const yMotor = wires([
+      ['POWER:U2', 'KM1:L1'],
+      ['KM1:T1', 'MOTOR:U1'],
+      ['POWER:V2', 'KM1:L2'],
+      ['KM1:T2', 'MOTOR:V1'],
+      ['POWER:W2', 'KM1:L3'],
+      ['KM1:T3', 'MOTOR:W1'],
+      ['MOTOR:U2', 'MOTOR:V2'],
+      ['MOTOR:V2', 'MOTOR:W2'],
+      ['POWER:L', 'KM1:A1'],
+      ['KM1:A2', 'POWER:N'],
+    ]);
+    const running = run(createSimulationState(yMotor), powerOn);
+    expect(running.result.motors.MOTOR).toBe(true);
+    const stopped = run(running, powerOff);
+    expect(stopped.result.motors.MOTOR).toBe(false);
+  });
+
   it('cannot latch a jog circuit through a batched press/release sequence', () => {
     const jog = EXAMPLES.find((example) => example.id === 'contactor-jog')!.wires;
     const state = run(createSimulationState(jog), powerOn, press('SB2'), release('SB2'));
@@ -80,7 +99,11 @@ describe('event-driven simulation state', () => {
         ['KM1:62', 'KM1:A1'],
         ['KM1:A2', 'POWER:N'],
       ]),
-      wires([['POWER:U2', 'KM1:L1']]),
+      wires([
+        ['POWER:L', 'HL1:1'],
+        ['HL1:2', 'HL2:1'],
+        ['HL2:2', 'POWER:N'],
+      ]),
     ];
     for (const circuit of cases) {
       const faulted = run(createSimulationState(circuit), powerOn);

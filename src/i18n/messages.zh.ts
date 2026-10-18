@@ -1,12 +1,16 @@
 export const zh = {
   'message.fault.short':
     '控制电源 L 与 N 被导线或闭合触点直接接通，发生短路。请断电检查标出的线路。',
+  'message.fault.phase-short':
+    '三相电源 {phases} 两相被导线或闭合触点直接接通，发生相间短路。请断电检查标出的线路。',
+  'message.fault.phase-neutral':
+    '三相电源 {phase} 相与电源 N 被导线或闭合触点直接接通，单相接地短路。请断电检查标出的线路。',
+  'message.fault.supply-mix':
+    '控制电源 L 与三相电源 {phase} 相被接到同一个节点；两套教学电源不共地，不能这样混接。请分开接线。',
   'message.fault.series':
     '{devices} 构成负载串联或分压网络；首版只计算独立跨接控制电源的负载，请改用并联支路。',
   'message.fault.unknown-terminal':
     '接线文件包含无法识别的端子，不能进行仿真。请检查或删除标出的线路。',
-  'message.fault.reserved':
-    '三相电源与电机端子为预留区域，首版暂不计算这类接法。控制实验请使用 POWER:L / POWER:N。',
   'message.fault.unstable':
     '{devices} 出现反复吸合与释放，回路无法稳定。请检查线圈与自身常闭触点或互相控制的接法。',
   'message.project.invalid-object': '{subject}格式不正确。',

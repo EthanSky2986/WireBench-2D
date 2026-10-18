@@ -1,10 +1,21 @@
 import type { Potential, SimulationResult } from './engine';
-import { CONTACTS, LOADS, TERMINAL_IDS, type Wire } from './model';
+import {
+  CONTACTS,
+  MOTOR_WINDINGS,
+  OBSERVABLE_LOADS,
+  SUPPLY_RAILS,
+  TERMINAL_IDS,
+  type ObservableLoad,
+  type Rail,
+  type Wire,
+} from './model';
 
 export interface LoadTrace {
-  /** The selected load's device ID, as defined by LOADS. */
+  /** The selected load's device ID, as defined by OBSERVABLE_LOADS. */
   loadId: string;
-  status: 'energized' | 'unpowered' | 'fault' | 'unconnected' | 'same-rail';
+  status: 'energized' | 'unpowered' | 'fault' | 'unconnected' | 'same-rail' | 'partial';
+  /** True when this entry is one device with several windings, i.e. the motor. */
+  multiWinding: boolean;
   ends: { terminalId: string; potential: Potential }[];
   wireIds: string[];
   contactIds: string[];
@@ -25,6 +36,10 @@ interface ConductorBlocks {
 }
 
 const TERMINAL_INDEX = new Map(TERMINAL_IDS.map((id, index) => [id, index]));
+
+function isRail(potential: Potential): potential is Rail {
+  return potential !== 'floating';
+}
 
 /**
  * Split the undirected conductor graph into biconnected edge blocks. In the
@@ -103,9 +118,9 @@ function conductorBlocks(wires: Wire[], result: SimulationResult): ConductorBloc
   return { edges, blocks, tree };
 }
 
-function supportEdges(network: ConductorBlocks, from: string, rail: 'L' | 'N'): number[] | null {
+function supportEdges(network: ConductorBlocks, from: string, rail: Rail): number[] | null {
   const start = TERMINAL_INDEX.get(from)!;
-  const target = TERMINAL_INDEX.get(`POWER:${rail}`)!;
+  const target = TERMINAL_INDEX.get(SUPPLY_RAILS[rail])!;
   const previous = new Map<number, number>([[start, -1]]);
   const queue = [start];
   for (let head = 0; head < queue.length && !previous.has(target); head++) {
@@ -137,15 +152,20 @@ export function traceLoad(
   powered: boolean,
   loadId: string,
 ): LoadTrace {
-  const load = LOADS.find((candidate) => candidate.deviceId === loadId);
-  const ends: LoadTrace['ends'] = load
-    ? [load.from, load.to].map((terminalId) => ({
-        terminalId,
-        potential: result.potential[terminalId] ?? 'floating',
-      }))
-    : [];
+  const entry = OBSERVABLE_LOADS.find((candidate) => candidate.deviceId === loadId);
+  // A motor is one device with three windings; explain all of them together.
+  const windings =
+    entry?.kind === 'winding' ? MOTOR_WINDINGS : entry ? [entry] : ([] as typeof MOTOR_WINDINGS);
+  const multiWinding = windings.length > 1;
+  const ends: LoadTrace['ends'] = windings.flatMap((winding) =>
+    [winding.from, winding.to].map((terminalId) => ({
+      terminalId,
+      potential: result.potential[terminalId] ?? 'floating',
+    })),
+  );
   const empty: LoadTrace = {
     loadId,
+    multiWinding,
     status: 'unconnected',
     ends,
     wireIds: [],
@@ -156,34 +176,84 @@ export function traceLoad(
   // contact graph. Never reconstruct a successful trace from that state.
   if (result.fault) return { ...empty, status: 'fault' };
   if (!powered) return { ...empty, status: 'unpowered' };
-  if (!load) return empty;
-  const [from, to] = ends;
-  if (from.potential !== 'floating' && from.potential === to.potential) {
-    return { ...empty, status: 'same-rail' };
+  if (!windings.length) return empty;
+
+  const energized = (load: (typeof MOTOR_WINDINGS)[number]): boolean =>
+    load.kind === 'winding'
+      ? !!result.windings[load.from]
+      : load.kind === 'coil'
+        ? !!result.coils[loadId]
+        : !!result.lamps[loadId];
+  const active = windings.filter(energized);
+  if (!active.length) {
+    // Naming why a single-winding load is dead keeps the existing hints valid.
+    const [from, to] = ends;
+    if (windings.length === 1 && isRail(from.potential) && from.potential === to.potential)
+      return { ...empty, status: 'same-rail' };
+    return empty;
   }
-  const active = load.kind === 'coil' ? result.coils[loadId] : result.lamps[loadId];
-  if (!active || from.potential === 'floating' || to.potential === 'floating') return empty;
+  // Some but not all windings carry current: explain the live ones, but the
+  // caller must still be able to say the motor as a whole is not running.
+  const partial = multiWinding && active.length < windings.length;
 
   const network = conductorBlocks(wires, result);
-  const fromEdges = supportEdges(network, load.from, from.potential);
-  const toEdges = supportEdges(network, load.to, to.potential);
-  // A mismatched result/wiring pair must not display a successful explanation.
-  if (fromEdges === null || toEdges === null) return empty;
   const wiresInTrace = new Set<string>();
   const contactsInTrace = new Set<string>();
-  const terminalsInTrace = new Set<string>([load.from, load.to]);
-  for (const edgeId of new Set([...fromEdges, ...toEdges])) {
-    const edge = network.edges[edgeId];
-    if (edge.wireId !== undefined) wiresInTrace.add(edge.wireId);
-    if (edge.contactId !== undefined) contactsInTrace.add(edge.contactId);
-    terminalsInTrace.add(TERMINAL_IDS[edge.from]);
-    terminalsInTrace.add(TERMINAL_IDS[edge.to]);
+  const terminalsInTrace = new Set<string>();
+  for (const winding of active) {
+    const fromRail = result.potential[winding.from] ?? 'floating';
+    const toRail = result.potential[winding.to] ?? 'floating';
+    const fromEdges = isRail(fromRail) ? supportEdges(network, winding.from, fromRail) : null;
+    const toEdges = isRail(toRail) ? supportEdges(network, winding.to, toRail) : null;
+    // A star point is floating, so one side of a Y winding may legitimately
+    // have no rail path; the winding still counts as energized by the engine.
+    if (fromEdges === null && toEdges === null) continue;
+    terminalsInTrace.add(winding.from);
+    terminalsInTrace.add(winding.to);
+    for (const edgeId of new Set([...(fromEdges ?? []), ...(toEdges ?? [])])) {
+      const edge = network.edges[edgeId];
+      if (edge.wireId !== undefined) wiresInTrace.add(edge.wireId);
+      if (edge.contactId !== undefined) contactsInTrace.add(edge.contactId);
+      terminalsInTrace.add(TERMINAL_IDS[edge.from]);
+      terminalsInTrace.add(TERMINAL_IDS[edge.to]);
+    }
   }
+  // No conductor evidence at all means this trace cannot explain the result;
+  // reporting "energized" with an empty path would present a claim, not a path.
+  if (!terminalsInTrace.size) return empty;
   return {
     ...empty,
-    status: 'energized',
+    status: partial ? 'partial' : 'energized',
     wireIds: [...wiresInTrace].sort(),
     contactIds: [...contactsInTrace].sort(),
     terminalIds: [...terminalsInTrace].sort(),
   };
+}
+
+/**
+ * Pick a useful default observation target. A device wired with more of its own
+ * terminals is more central to the circuit, so a motor example opens on the
+ * motor instead of the contactor coil that switches it. A preferred device that
+ * is wired still wins when it is the most connected one.
+ */
+export function preferredLoadId(wires: Wire[], preferred: string | null): string {
+  const wired = (load: ObservableLoad): number =>
+    load.terminals.filter((terminal) =>
+      wires.some((wire) => wire.from === terminal || wire.to === terminal),
+    ).length;
+  // The preferred device wins only while it stays one of the most-wired loads;
+  // switching examples must not keep a stale target from the previous circuit.
+  const ranked = OBSERVABLE_LOADS.map((load) => ({ load, count: wired(load) }))
+    .filter((entry) => entry.count > 0)
+    .sort((left, right) => right.count - left.count);
+  if (ranked.length > 0) {
+    const top = ranked[0].count;
+    const best = ranked.filter((entry) => entry.count === top);
+    const matching = best.find((entry) => entry.load.deviceId === preferred);
+    return (matching ?? best[0]).load.deviceId;
+  }
+  return (
+    OBSERVABLE_LOADS.find((load) => load.deviceId === preferred)?.deviceId ??
+    OBSERVABLE_LOADS[0].deviceId
+  );
 }
