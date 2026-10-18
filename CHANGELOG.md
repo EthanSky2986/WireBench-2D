@@ -11,6 +11,10 @@
 - 教学电源与接线盒按实物重画：三相电机有蓝色机座、散热筋、铭牌、顶部黑色接线盒和带散热槽的风罩，运转时风罩内风扇持续旋转（尊重 `prefers-reduced-motion`），旁侧还带运转指示灯。
 - 通电反馈扩到三相：实验台端子和导线按母线着色（L/N 之外，U/V/W 各有独立颜色），三相主回路即使经过接触器主触点仍能一眼追踪相序。
 - 分步观察可以选电机，一次说明三个绕组；只有部分绕组得电时显示「部分绕组得电」并列出仍然通路的部分，便于排查缺相、KM 主触点或星点连线。
+- 器件绘制细节提升：接触器铭牌回到模制面内并重排辅助触点，热继电器增加刻度盘高光与跳闸指示灯，按钮/指示灯改为带四角螺钉的沉台面板，熄灭的灯罩透出本色而不是黑洞，各器件加落地阴影。
+- 固定引出线改为沿线槽正交走线并绘制带齿线槽本体；原先的弧形走线在适配缩放下互相交叉，读起来像噪声。暗色主题下同样可辨。
+
+English (panel detail): Contactor silkscreen stays inside the moulding with the LANN22 blocks split left and right, the thermal relay gains a raised dial and a trip lamp, pushbuttons and lamps sit on a recessed four-screw bezel, an unlit lens shows its colour, every device casts a contact shadow, and fixed leads now run orthogonally through a drawn wiring duct instead of crossing as arcs. Rail wording in the observation panel names supply rails rather than L/N only.
 
 English (motor presentation): The motor is redrawn from the bench machine — blue finned housing, nameplate, top terminal box and a slotted fan cowl whose blades turn while the motor runs, with a reduced-motion opt-out and a running indicator. Terminal and wire feedback now covers all five rails, so U/V/W stay traceable after the contactor main contacts. The observation panel can select the motor and explains all three windings, reporting a partially energized motor instead of pretending it runs.
 
