@@ -112,3 +112,23 @@
     animation: none;
   }
 }
+
+/* Auxiliary contact numbers and silkscreen must stay legible at bench scale. */
+.refined-device-art .refined-contact-number {
+  fill: #d7dfe2;
+  font-size: 5.2px;
+}
+
+.refined-device-art .refined-silkscreen {
+  fill: #e2e7e9;
+}
+
+/* A running contactor shows its amber window and a soft coil glow. */
+.refined-device-art--contactor .refined-coil-window {
+  opacity: 0;
+  transition: opacity var(--refined-transition);
+}
+
+.refined-device-art--contactor.is-active .refined-coil-window {
+  opacity: 1;
+}

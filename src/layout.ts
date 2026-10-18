@@ -131,26 +131,71 @@ export const SOCKETS: Socket[] = strips.flatMap((s) =>
 export const SOCKET_MAP: Record<string, Socket> = Object.fromEntries(SOCKETS.map((s) => [s.id, s]));
 export const PLACEMENT_MAP = Object.fromEntries(placements.map((p) => [p.id, p]));
 
-/** Fixed-lead geometry is visual only; terminal identities still define the one-to-one mapping. */
-export function fixedLeadPath(s: Strip, part: Placement, index: number): string {
-  const sx = s.x + index * s.step + s.step / 2,
-    sy = s.y + (s.side === 'top' ? 52 : 10),
-    fraction = index / (s.labels.length - 1 || 1);
+/**
+ * Fixed-lead geometry is visual only; terminal identities still define the
+ * one-to-one mapping. Leads run orthogonally into a shared wiring duct and then
+ * across to the device, which is how a real training panel is dressed. Curved
+ * leads were unreadable at the fitted bench zoom: dozens of crossing arcs read
+ * as noise rather than as wiring.
+ */
+export interface FixedLead {
+  points: Point[];
+  /** The duct segment the lead shares with its neighbours, drawn once per group. */
+  duct: 'upper' | 'lower' | null;
+}
+
+const DUCT_GAP = 12;
+
+export function fixedLead(s: Strip, part: Placement, index: number): FixedLead {
+  // Start from the exposed socket, which is the connection a learner can reach.
+  const sx = s.x + index * s.step + s.step / 2;
+  const sy = s.y + (s.side === 'top' ? 10 : 52);
+  const fraction = index / (s.labels.length - 1 || 1);
+  // Straight drops into the local duct, then a single orthogonal run.
   if (DEVICE_MAP[s.deviceId].kind === 'limit') {
-    // Only the short entry into the lower duct is exposed; the route to the SQ body stays concealed.
-    return `M${sx} ${sy} V${CONTROL_RAIL_Y + 1}`;
+    return {
+      points: [
+        { x: sx, y: sy },
+        { x: sx, y: CONTROL_RAIL_Y + 1 },
+      ],
+      duct: 'lower',
+    };
   }
   if (DEVICE_MAP[s.deviceId].kind === 'lamp') {
-    // Leads emerge below the shared enclosure; lamp connections inside it are concealed.
-    return `M${sx} ${sy} V${LAMP_PANEL.y + LAMP_PANEL.height}`;
+    return {
+      points: [
+        { x: sx, y: sy },
+        { x: sx, y: LAMP_PANEL.y + LAMP_PANEL.height },
+      ],
+      duct: null,
+    };
   }
-  let tx = part.x + 18 + fraction * (part.size - 36),
-    ty = part.y + (s.side === 'top' ? 13 : part.size - 9);
+  // The duct sits between the strip and the device body, so every lead in a
+  // group shares one horizontal bus instead of arcing across its neighbours.
+  const facing = s.side === 'top' ? 1 : -1;
+  const ductY = sy + facing * DUCT_GAP;
+  let tx = part.x + 18 + fraction * (part.size - 36);
+  let ty = part.y + (s.side === 'top' ? 13 : part.size - 9);
   if (s.deviceId === 'POWER') {
     tx = part.x + 100;
     ty = part.y + 70;
   }
-  return `M${sx} ${sy} C${sx} ${(sy + ty) / 2} ${tx} ${(sy + ty) / 2} ${tx} ${ty}`;
+  return {
+    points: [
+      { x: sx, y: sy },
+      { x: sx, y: ductY },
+      { x: tx, y: ductY },
+      { x: tx, y: ty },
+    ],
+    duct: s.side === 'top' ? 'upper' : 'lower',
+  };
+}
+
+/** Straight-line path for a fixed lead; the bend radius is applied when drawn. */
+export function fixedLeadPath(s: Strip, part: Placement, index: number): string {
+  return fixedLead(s, part, index)
+    .points.map((point, i) => `${i === 0 ? 'M' : 'L'}${point.x} ${point.y}`)
+    .join(' ');
 }
 
 export const friendlyTerminal = (id: string) => id.replace(':', ' · ');

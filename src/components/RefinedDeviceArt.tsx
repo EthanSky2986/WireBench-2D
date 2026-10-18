@@ -162,7 +162,8 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
 
       {kind === 'contactor' && (
         <g>
-          <rect x="19" y="10" width="126" height="146" rx="4" fill="#172027" opacity="0.12" />
+          {/* Cast shadow keeps the device sitting on the rail instead of floating. */}
+          <rect x="20" y="12" width="126" height="146" rx="4" fill="#172027" opacity="0.16" />
           <rect
             x="18"
             y="8"
@@ -181,6 +182,7 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           />
           <path d="M 28 7 H 132 M 19 20 V 137" stroke="#a1a9ac" strokeWidth="1" opacity="0.6" />
           <path d="M 141 21 V 138 H 134 V 150" stroke="#242e34" strokeWidth="2" />
+          {/* Moulded ribs on the case flanks. */}
           {[31, 47, 63, 79, 95, 111, 127].map((y) => (
             <g key={y} strokeWidth="1">
               <path d={`M 19 ${y} H 26`} stroke="#788287" opacity="0.65" />
@@ -188,6 +190,7 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
             </g>
           ))}
 
+          {/* Main and auxiliary terminal pockets with their screw heads. */}
           {[33, 64, 95, 126].map((x, index) => (
             <g key={x}>
               <path
@@ -223,6 +226,7 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
             </g>
           ))}
 
+          {/* Recessed front moulding that carries the auxiliary contacts. */}
           <rect x="23" y="46" width="116" height="77" rx="2" fill="#172025" opacity="0.5" />
           <path
             d="M 21 44 H 138 L 140 47 V 120 H 23 L 21 117 Z"
@@ -233,27 +237,64 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           <rect x="24" y="47" width="113" height="71" rx="1" fill={fill('front')} />
           <path d="M 24 47 H 137 M 24 48 V 117" stroke="#859096" strokeWidth="0.7" opacity="0.65" />
           <path d="M 25 119 H 139 V 47" stroke="#111c22" strokeWidth="1.4" />
-          {[38, 66, 94, 122].map((x, index) => (
-            <g key={x}>
-              <Screw x={x} y={59} radius={3.6} metal={fill('metal')} />
-              <Screw x={x} y={106} radius={3.6} metal={fill('metal')} />
-              <text x={x} y="52" textAnchor="middle" className="refined-contact-number">
-                {['53', '61', '71', '83'][index]}
+
+          {/* Two auxiliary blocks sit on the right of the front moulding, as on
+              the real LANN22 stack: NO terminals 53/54 and 83/84 above, the
+              normally-closed 61/62 and 71/72 below. */}
+          <rect x="96" y="49" width="40" height="67" rx="1.5" fill="#1d262b" />
+          <path d="M 97 50 V 114" stroke="#3d484e" strokeWidth="0.8" />
+          <path d="M 96 81.5 H 136" stroke="#3a464c" strokeWidth="0.7" />
+
+          {[108, 124].map((x, index) => (
+            <g key={`no-${x}`}>
+              <Screw x={x} y={62} radius={3.4} metal={fill('metal')} />
+              <Screw x={x} y={100} radius={3.4} metal={fill('metal')} />
+              <text x={x} y="55" textAnchor="middle" className="refined-contact-number">
+                {['53', '83'][index]}
               </text>
-              <text x={x} y="116" textAnchor="middle" className="refined-contact-number">
-                {['54', '62', '72', '84'][index]}
+              <text x={x} y="110" textAnchor="middle" className="refined-contact-number">
+                {['54', '84'][index]}
               </text>
             </g>
           ))}
-          <text x="32" y="80" fill="#eef1f1" fontSize="10" fontWeight="650" letterSpacing="0.3">
+
+          {/* Main auxiliary contacts on the left of the front, clear of the coil window. */}
+          {[31, 84].map((x, index) => (
+            <g key={`aux-${x}`}>
+              <Screw x={x} y={62} radius={3.4} metal={fill('metal')} />
+              <Screw x={x} y={100} radius={3.4} metal={fill('metal')} />
+              <text x={x} y="55" textAnchor="middle" className="refined-contact-number">
+                {['61', '71'][index]}
+              </text>
+              <text x={x} y="110" textAnchor="middle" className="refined-contact-number">
+                {['62', '72'][index]}
+              </text>
+            </g>
+          ))}
+
+          {/* Nameplate: device ID plus the class this model represents, kept inside the panel. */}
+          <text
+            x="63"
+            y="70"
+            textAnchor="middle"
+            fill="#eef1f1"
+            fontSize="9.5"
+            fontWeight="650"
+            letterSpacing="0.3"
+          >
             {id}
           </text>
-          <text x="32" y="90" fill="#b9c2c6" fontSize="5.3" letterSpacing="0.3">
+          <text x="63" y="78" textAnchor="middle" fill="#96a2a8" fontSize="4.4" letterSpacing="0.2">
             AC CONTACTOR
           </text>
-          <text x="129" y="80" textAnchor="end" fill="#c3ccd0" fontSize="6" letterSpacing="0.1">
+          <text x="63" y="86" textAnchor="middle" fill="#7c8890" fontSize="4" letterSpacing="0.1">
             LANN22
           </text>
+          <text x="63" y="94" textAnchor="middle" fill="#6f7c84" fontSize="4" letterSpacing="0.1">
+            Ui 690V AC-3
+          </text>
+
+          {/* Coil energization window: the amber flag drops when the coil pulls in. */}
           <path d="M 74 72 H 88 V 97 H 74 Z" fill="#101b21" stroke="#768189" strokeWidth="0.7" />
           <rect x="76" y="75" width="10" height="19" rx="0.7" fill="#725421" />
           <rect
@@ -344,9 +385,21 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           >
             {id}
           </text>
-          <text x="127" y="62" textAnchor="end" fill="#bdc7cb" fontSize="5">
+          <text x="127" y="62" textAnchor="end" fill="#bdc7cb" fontSize="4.6">
             THERMAL RELAY
           </text>
+          <text x="127" y="69" textAnchor="end" fill="#8b979d" fontSize="4.2">
+            Ui 690V · 10A
+          </text>
+          {/* Trip indicator: dark at rest, red when the relay has tripped. */}
+          <circle
+            cx="127"
+            cy="77"
+            r="2.6"
+            fill={tripped ? '#e2643f' : '#2a343a'}
+            stroke={tripped ? '#ffb08a' : '#65727a'}
+            strokeWidth="0.6"
+          />
           <circle cx="53" cy="89" r="18" fill="#202b32" stroke="#7f8c92" strokeWidth="0.7" />
           {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle) => (
             <path
@@ -358,7 +411,22 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
             />
           ))}
           <circle cx="53" cy="89" r="11" fill={fill('plate')} stroke="#909da3" strokeWidth="0.7" />
-          <path d="M 49 94 L 58 82" stroke="#45545b" strokeWidth="3" strokeLinecap="round" />
+          <path
+            d="M 44 85 A 11 11 0 0 1 60 80"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="1.1"
+            opacity="0.75"
+          />
+          <path
+            d="M 50 94 L 59 83"
+            stroke="#2f3c42"
+            strokeWidth="3.4"
+            strokeLinecap="round"
+            opacity="0.35"
+          />
+          <path d="M 49 93 L 58 82" stroke="#45545b" strokeWidth="3" strokeLinecap="round" />
+          <circle cx="53" cy="89" r="2" fill="#5d6a71" />
           <rect
             x="77"
             y="74"
@@ -698,7 +766,9 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
         <g>
           {!panelMounted && (
             <>
-              <rect x="16" y="12" width="132" height="136" rx="7" fill="#283238" opacity="0.09" />
+              {/* Mounting plate: a bevelled aluminium square with four corner
+                  screws and a recessed bezel the operator sits in. */}
+              <rect x="16" y="12" width="132" height="136" rx="7" fill="#283238" opacity="0.14" />
               <rect
                 x="14"
                 y="9"
@@ -713,7 +783,7 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
                 d="M 21 10 H 139 Q 145 10 145 16 M 15 18 V 138"
                 fill="none"
                 stroke="#fff"
-                strokeWidth="1"
+                strokeWidth="1.1"
                 opacity="0.9"
               />
               <path
@@ -723,7 +793,20 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
                 strokeWidth="1"
                 opacity="0.6"
               />
+              <rect
+                x="22"
+                y="17"
+                width="116"
+                height="120"
+                rx="4"
+                fill="none"
+                stroke="#b6bebf"
+                strokeWidth="0.7"
+                opacity="0.8"
+              />
               <Screw x={25} y={21} radius={2.9} metal={fill('metal')} />
+              <Screw x={135} y={21} radius={2.9} metal={fill('metal')} />
+              <Screw x={25} y={133} radius={2.9} metal={fill('metal')} />
               <Screw x={135} y={133} radius={2.9} metal={fill('metal')} />
             </>
           )}
@@ -802,11 +885,14 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
             </g>
           ) : (
             <g>
+              {/* Unlit lenses are translucent in practice: the colour still reads. */}
+              <circle cx="80" cy="70" r="34" fill={lens.face} opacity="0.55" />
               <circle
                 cx="80"
                 cy="70"
                 r="34"
                 fill={fill('off')}
+                opacity="0.82"
                 stroke={lens.dark}
                 strokeWidth="1"
               />

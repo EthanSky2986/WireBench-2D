@@ -531,6 +531,19 @@ export default function Bench(p: Props) {
               operable = ['button', 'limit', 'estop'].includes(d.kind);
             return (
               <g key={d.id}>
+                {/* Contact shadow: the device body rests on the rail rather than
+                    floating on the plate. Drawn from the placement box so it
+                    follows every artwork change. */}
+                <ellipse
+                  cx={part.x + part.size / 2}
+                  cy={part.y + part.size * 0.94}
+                  rx={part.size * 0.4}
+                  ry={part.size * 0.055}
+                  fill="#1c2a24"
+                  opacity="0.16"
+                  pointerEvents="none"
+                  aria-hidden="true"
+                />
                 <text
                   x={part.labelX}
                   y={part.labelY}

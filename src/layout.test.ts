@@ -8,6 +8,7 @@ import {
   clampPoint,
   BUTTON_STRIPS,
   wirePoints,
+  fixedLead,
 } from './layout';
 import { encodeProject, parseProject } from './project';
 
@@ -103,5 +104,36 @@ describe('layout and persisted wiring contract', () => {
       },
     ];
     expect(parseProject(encodeProject('越界拖动', wires)).wires).toEqual(wires);
+  });
+});
+
+describe('fixed lead dressing', () => {
+  it('drops into a duct and runs orthogonally instead of curving across neighbours', () => {
+    for (const strip of strips) {
+      const part = PLACEMENT_MAP[strip.deviceId];
+      strip.labels.forEach((label, index) => {
+        const lead = fixedLead(strip, part, index);
+        expect(lead.points.length).toBeGreaterThanOrEqual(2);
+        // Every segment is axis-aligned: no arcs, so leads cannot cross visually.
+        for (let i = 1; i < lead.points.length; i++) {
+          const a = lead.points[i - 1];
+          const b = lead.points[i];
+          expect(a.x === b.x || a.y === b.y, `${strip.deviceId}:${label} segment ${i}`).toBe(true);
+        }
+        // The lead starts at its own socket and never leaves the board.
+        const socket = SOCKET_MAP[`${strip.deviceId}:${label}`];
+        expect(lead.points[0]).toEqual({ x: socket.x, y: socket.y });
+        for (const point of lead.points) {
+          expect(Number.isFinite(point.x + point.y)).toBe(true);
+        }
+      });
+    }
+  });
+
+  it('shares one duct row per strip group', () => {
+    const strip = strips.find((s) => s.deviceId === 'KM1')!;
+    const part = PLACEMENT_MAP.KM1;
+    const rows = strip.labels.map((_, index) => fixedLead(strip, part, index).points[1].y);
+    expect(new Set(rows).size).toBe(1);
   });
 });
