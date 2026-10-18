@@ -648,16 +648,44 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           <path d="M 16 110 H 100" stroke="#163042" strokeWidth="1.6" opacity="0.55" />
           {/* Nameplate. Its ratings are deliberately not modelled, only its presence. */}
           <rect x="22" y="60" width="27" height="42" rx="1.5" fill="#e9ece4" stroke="#8d9a8d" />
-          <path d="M 25 65 H 44" stroke="#3f4a3f" strokeWidth="1.8" />
-          {[71, 76.5, 82, 87.5, 93, 98].map((y) => (
-            <path key={y} d={`M 25 ${y} H 45`} stroke="#7f8b7f" strokeWidth="0.9" opacity="0.8" />
-          ))}
-          {/* Terminal box bolted onto the top face, with its own lid screws. */}
+          <path d="M 22 64 H 49" stroke="#3f4a3f" strokeWidth="2" />
+          <path
+            d="M 24 69 H 47 M 24 74 H 41 M 24 79 H 45 M 24 84 H 38 M 24 89 H 44 M 24 94 H 40"
+            stroke="#7f8b7f"
+            strokeWidth="0.9"
+            opacity="0.8"
+          />
+          <path d="M 34 66 V 96" stroke="#c3cbc2" strokeWidth="0.5" opacity="0.7" />
+          {/* Terminal box bolted onto the top face. The lid is raised with two
+              corner screws, and the winding studs show through the aperture. */}
           <rect x="54" y="24" width="46" height="28" rx="3" fill="#1d2225" stroke="#0b0f11" />
-          <rect x="57" y="27" width="40" height="17" rx="2" fill="#2f373c" />
+          <rect x="57" y="27" width="40" height="22" rx="2" fill="#2f373c" />
           <path d="M 58 28.5 H 96" stroke="#68747b" strokeWidth="1" opacity="0.65" />
+          {[61.5, 69.5, 77.5, 85.5].map((x) => (
+            <circle
+              key={x}
+              cx={x}
+              cy="38"
+              r="1.9"
+              fill="#1a2226"
+              stroke="#6d7a81"
+              strokeWidth="0.6"
+            />
+          ))}
           <circle cx="95" cy="46.5" r="2" fill="#b9963f" />
           <circle cx="59" cy="46.5" r="2" fill="#b9963f" />
+          {/* Cable gland where the motor leads leave the box. */}
+          <rect
+            x="73"
+            y="50"
+            width="9"
+            height="6"
+            rx="1.5"
+            fill="#111819"
+            stroke="#48555b"
+            strokeWidth="0.6"
+          />
+          <path d="M 75 53 H 80" stroke="#7d8a91" strokeWidth="0.8" />
           {/* Short shaft linking the housing to the fan cowl. */}
           <rect x="98" y="76" width="16" height="9" rx="2" fill={fill('metal')} stroke="#5d6a72" />
           {/* Fan cowl: a ring of cooling slots around the rotating blade set. */}
