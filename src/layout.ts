@@ -145,6 +145,26 @@ export interface FixedLead {
 }
 
 const DUCT_GAP = 12;
+/** Horizontal duct rows that fixed leads share, used to draw the channel itself. */
+export const DUCT_ROWS: {
+  deviceId: string;
+  side: 'top' | 'bottom';
+  y: number;
+  from: number;
+  to: number;
+}[] = strips
+  .filter((s) => !['limit', 'lamp'].includes(DEVICE_MAP[s.deviceId].kind))
+  .map((s) => {
+    const sy = s.y + (s.side === 'top' ? 10 : 52);
+    const facing = s.side === 'top' ? 1 : -1;
+    return {
+      deviceId: s.deviceId,
+      side: s.side,
+      y: sy + facing * DUCT_GAP,
+      from: s.x,
+      to: s.x + s.labels.length * s.step,
+    };
+  });
 
 export function fixedLead(s: Strip, part: Placement, index: number): FixedLead {
   // Start from the exposed socket, which is the connection a learner can reach.

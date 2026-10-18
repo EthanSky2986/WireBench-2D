@@ -45,6 +45,9 @@
   --rail-highlight: #f8f9ef;
   --fixed-wire: #96a298;
   --fixed-wire-power: #949f76;
+  --duct-body: #cfd6cc;
+  --duct-edge: #a9b4a9;
+  --duct-tooth: #8d9b90;
   --wire-halo: #f0f2e9;
   --wire-selection: #086e80;
   --learning-trace: #8355bb;
@@ -107,6 +110,9 @@
   --rail-highlight: #bfccd4;
   --fixed-wire: #82949f;
   --fixed-wire-power: #9ea89b;
+  --duct-body: #3a4a52;
+  --duct-edge: #55676f;
+  --duct-tooth: #6c7f87;
   --wire-halo: #9baeb9;
   --wire-selection: #7fddf3;
   --on-wire-selection: #112e39;

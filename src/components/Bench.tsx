@@ -14,6 +14,7 @@ import {
   polyline,
   clampPoint,
   fixedLeadPath,
+  DUCT_ROWS,
   localizeDevice,
 } from '../layout';
 import type { Point } from '../layout';
@@ -490,6 +491,37 @@ export default function Bench(p: Props) {
             fill="var(--board-panel-bg)"
             stroke="var(--board-border)"
           />
+          {/* Wiring duct under each strip group: leads drop into the channel and
+              leave at the device, which is how a training panel is dressed. */}
+          {p.fixed &&
+            DUCT_ROWS.map((row) => (
+              <g
+                key={`duct-${row.deviceId}-${row.side}`}
+                className="wiring-duct"
+                pointerEvents="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x={row.from - 4}
+                  y={row.y - 3.4}
+                  width={row.to - row.from + 8}
+                  height="6.8"
+                  rx="1.6"
+                  fill="var(--duct-body)"
+                  stroke="var(--duct-edge)"
+                  strokeWidth="0.7"
+                />
+                {Array.from({ length: Math.floor((row.to - row.from) / 6) }, (_, i) => (
+                  <path
+                    key={i}
+                    d={`M ${row.from + i * 6 + 2} ${row.y - 3.4} V ${row.y + 3.4}`}
+                    stroke="var(--duct-tooth)"
+                    strokeWidth="0.6"
+                    opacity="0.55"
+                  />
+                ))}
+              </g>
+            ))}
           {p.fixed &&
             strips.map((s, si) => {
               const part = placements.find((x) => x.id === s.deviceId)!;
