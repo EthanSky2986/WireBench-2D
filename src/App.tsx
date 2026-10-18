@@ -38,7 +38,7 @@ import {
 import Bench from './components/Bench';
 import Inspector from './components/Inspector';
 import ObservationPanel from './components/ObservationPanel';
-import { traceLoad } from './sim/loadTrace';
+import { preferredLoadId, traceLoad } from './sim/loadTrace';
 import LanguageToggle from './components/LanguageToggle';
 import ThemeToggle from './components/ThemeToggle';
 import ResetMenu from './components/ResetMenu';
@@ -46,7 +46,7 @@ import Modal from './components/Modal';
 import LayoutReference from './components/LayoutReference';
 import { createWorkspaceState, currentWorkspace, workspaceReducer } from './workspace';
 import ColorPicker, { WIRE_COLORS } from './components/ColorPicker';
-import { DEVICES, LOADS, TERMINAL_IDS } from './sim/model';
+import { DEVICES, TERMINAL_IDS } from './sim/model';
 import type { Wire } from './sim/model';
 import { useSimulation } from './hooks/useSimulation';
 import { useProjectAutosave } from './hooks/useProjectAutosave';
@@ -98,20 +98,6 @@ const EXAMPLE_KEYS: Record<string, Record<'name' | 'subtitle' | 'description', T
     description: 'ui.example.motor-self-hold.description',
   },
 };
-
-function observationTarget(wires: Wire[], preferred: string | null): string {
-  const connectedLoads = LOADS.filter((load) =>
-    wires.some(
-      (wire) => [wire.from, wire.to].includes(load.from) || [wire.from, wire.to].includes(load.to),
-    ),
-  );
-  return (
-    connectedLoads.find((load) => load.deviceId === preferred)?.deviceId ??
-    connectedLoads[0]?.deviceId ??
-    LOADS.find((load) => load.deviceId === preferred)?.deviceId ??
-    LOADS[0].deviceId
-  );
-}
 
 function newId() {
   return crypto.randomUUID();
@@ -392,7 +378,7 @@ export default function App() {
     }));
     dispatchWorkspace({ type: 'enter-example', id, name: exampleText(ex.id, 'name'), wires: next });
     resetSimulation(next);
-    if (stepMode) setTraceTarget(observationTarget(next, traceTarget));
+    if (stepMode) setTraceTarget(preferredLoadId(next, traceTarget));
     if (window.innerWidth <= 1050) setNav(false);
     cancel();
     setSelected('KM1');
@@ -754,7 +740,7 @@ export default function App() {
                   selectSnapshot(null);
                   setStepMode(!stepMode);
                   if (!stepMode) {
-                    setTraceTarget(observationTarget(wires, selected));
+                    setTraceTarget(preferredLoadId(wires, selected));
                     setInspectorOpen(true);
                   }
                 }}

@@ -927,14 +927,17 @@ export default function Bench(p: Props) {
                     pointerEvents="none"
                   />
                 )}
+                {/* A live rail fills the ring as well as its outline, so an
+                    energized phase stays readable at the fitted bench zoom. */}
                 <circle
                   className="socket-ring"
                   cx={s.x}
                   cy={s.y}
                   r="6.2"
-                  fill={selected ? '#d5f1e5' : '#697e70'}
-                  stroke={selected ? '#127659' : liveRail ? liveRail : '#a7b5ab'}
-                  strokeWidth={selected ? 2.5 : liveRail ? 2 : 1}
+                  fill={selected ? '#d5f1e5' : (liveRail ?? '#697e70')}
+                  stroke={selected ? '#127659' : liveRail ? '#0d1a12' : '#a7b5ab'}
+                  strokeWidth={selected ? 2.5 : liveRail ? 1.4 : 1}
+                  opacity={selected ? 1 : liveRail ? 0.92 : 1}
                 />
                 <circle
                   cx={s.x}

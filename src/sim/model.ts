@@ -206,6 +206,17 @@ export const ALL_LOADS: Load[] = [...LOADS, ...MOTOR_WINDINGS];
 /**
  * One entry per device a learner can pick in the observation panel. A motor is
  * one device with three windings, so it is listed once, using its U1-U2 winding
- * only as the identity the trace resolver re-expands.
+ * only as the identity the trace resolver re-expands. `terminals` lists every
+ * socket of the device so callers can rank how central a device is to a wiring.
  */
-export const OBSERVABLE_LOADS: Load[] = [...LOADS, ...MOTOR_WINDINGS.slice(0, 1)];
+export interface ObservableLoad extends Load {
+  terminals: string[];
+}
+
+export const OBSERVABLE_LOADS: ObservableLoad[] = [
+  ...LOADS.map((load) => ({ ...load, terminals: [load.from, load.to] })),
+  ...MOTOR_WINDINGS.slice(0, 1).map((winding) => ({
+    ...winding,
+    terminals: [...new Set(MOTOR_WINDINGS.flatMap((entry) => [entry.from, entry.to]))],
+  })),
+];

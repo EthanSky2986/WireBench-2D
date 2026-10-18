@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { simulate } from './engine';
 import { EXAMPLES } from './examples';
-import { traceLoad } from './loadTrace';
+import { preferredLoadId, traceLoad } from './loadTrace';
 import { TERMINAL_IDS, type Wire } from './model';
 
 const connect = (...pairs: [string, string][]): Wire[] =>
@@ -256,5 +256,34 @@ describe('motor observation', () => {
     const stopped = simulate(wires, {}, true);
     expect(stopped.motors.MOTOR).toBe(false);
     expect(traceLoad(wires, stopped, true, 'MOTOR').status).toBe('unconnected');
+  });
+});
+
+describe('default observation target', () => {
+  it('opens a motor example on the motor rather than on its contactor coil', () => {
+    expect(preferredLoadId(example('motor-self-hold'), 'KM1')).toBe('MOTOR');
+  });
+
+  it('keeps the existing examples on the load they are about', () => {
+    expect(preferredLoadId(example('button-lamp'), 'KM1')).toBe('HL2');
+    expect(preferredLoadId(example('contactor-jog'), 'KM1')).toBe('KM1');
+    expect(preferredLoadId(example('self-hold'), 'KM1')).toBe('KM1');
+  });
+
+  it('falls back to the first observable load when nothing is wired yet', () => {
+    expect(preferredLoadId([], null)).toBe('KM1');
+    expect(preferredLoadId([], 'MOTOR')).toBe('MOTOR');
+  });
+
+  it('honours a preferred load that is tied for the most connections', () => {
+    // Both HL1 and HL2 are fully wired here, so the learner's own choice stays.
+    const wires = connect(
+      ['POWER:L', 'HL1:1'],
+      ['HL1:2', 'POWER:N'],
+      ['POWER:L', 'HL2:1'],
+      ['HL2:2', 'POWER:N'],
+    );
+    expect(preferredLoadId(wires, 'HL2')).toBe('HL2');
+    expect(preferredLoadId(wires, 'HL1')).toBe('HL1');
   });
 });

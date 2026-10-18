@@ -5,6 +5,7 @@ import {
   OBSERVABLE_LOADS,
   SUPPLY_RAILS,
   TERMINAL_IDS,
+  type ObservableLoad,
   type Rail,
   type Wire,
 } from './model';
@@ -227,4 +228,32 @@ export function traceLoad(
     contactIds: [...contactsInTrace].sort(),
     terminalIds: [...terminalsInTrace].sort(),
   };
+}
+
+/**
+ * Pick a useful default observation target. A device wired with more of its own
+ * terminals is more central to the circuit, so a motor example opens on the
+ * motor instead of the contactor coil that switches it. A preferred device that
+ * is wired still wins when it is the most connected one.
+ */
+export function preferredLoadId(wires: Wire[], preferred: string | null): string {
+  const wired = (load: ObservableLoad): number =>
+    load.terminals.filter((terminal) =>
+      wires.some((wire) => wire.from === terminal || wire.to === terminal),
+    ).length;
+  // The preferred device wins only while it stays one of the most-wired loads;
+  // switching examples must not keep a stale target from the previous circuit.
+  const ranked = OBSERVABLE_LOADS.map((load) => ({ load, count: wired(load) }))
+    .filter((entry) => entry.count > 0)
+    .sort((left, right) => right.count - left.count);
+  if (ranked.length > 0) {
+    const top = ranked[0].count;
+    const best = ranked.filter((entry) => entry.count === top);
+    const matching = best.find((entry) => entry.load.deviceId === preferred);
+    return (matching ?? best[0]).load.deviceId;
+  }
+  return (
+    OBSERVABLE_LOADS.find((load) => load.deviceId === preferred)?.deviceId ??
+    OBSERVABLE_LOADS[0].deviceId
+  );
 }
