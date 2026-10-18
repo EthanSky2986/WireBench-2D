@@ -301,14 +301,24 @@ function windingEnergized(winding: Load, network: Network, star: Set<number>): b
   return false;
 }
 
+/** The phase rail feeding one winding end, when that end is tied to a phase. */
+function phaseOf(network: Network, terminal: string): Rail | null {
+  const rail = network.railOf.get(network.component.get(terminal)!);
+  return rail && isPhase(rail) ? rail : null;
+}
+
 function motorStates(network: Network): {
   motors: Record<string, boolean>;
   windings: Record<string, boolean>;
 } {
   const star = starComponents(network);
   const energized = MOTOR_WINDINGS.map((winding) => windingEnergized(winding, network, star));
-  // A rotating field needs all three windings; one missing phase opens the motor.
-  const running = energized.every(Boolean);
+  // A rotating field needs all three windings and three distinct phases feeding
+  // them. Wiring L1/L2/L3 to the same phase leaves every winding "energized"
+  // between that phase and the star point, yet nothing turns.
+  const supplied = MOTOR_WINDINGS.map((winding) => phaseOf(network, winding.from));
+  const rotating = new Set(supplied.filter((rail): rail is Rail => rail !== null));
+  const running = energized.every(Boolean) && rotating.size === MOTOR_WINDINGS.length;
   return {
     motors: Object.fromEntries(MOTOR_IDS.map((id) => [id, running])),
     windings: Object.fromEntries(

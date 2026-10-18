@@ -621,3 +621,41 @@ describe('contactor self-holding with a motor example', () => {
     expect(state.motors.MOTOR).toBe(false);
   });
 });
+
+describe('motor needs three distinct phases', () => {
+  const main = (): [string, string][] => [
+    ['POWER:U2', 'KM1:L1'],
+    ['KM1:T1', 'MOTOR:U1'],
+    ['POWER:V2', 'KM1:L2'],
+    ['KM1:T2', 'MOTOR:V1'],
+    ['POWER:W2', 'KM1:L3'],
+    ['KM1:T3', 'MOTOR:W1'],
+    ['MOTOR:U2', 'MOTOR:V2'],
+    ['MOTOR:V2', 'MOTOR:W2'],
+    ['POWER:L', 'KM1:A1'],
+    ['KM1:A2', 'POWER:N'],
+  ];
+
+  it('does not run when all three main contacts are fed from one phase', () => {
+    const wires = connect(...main()).map((wire) =>
+      wire.from === 'POWER:V2' || wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:U2' } : wire,
+    );
+    const state = simulate(wires, {}, true);
+    expect(state.fault).toBeNull();
+    // Each winding does span a phase and the star point, so the windings report
+    // energized; only the missing phase rotation keeps the motor stopped.
+    expect(state.windings['MOTOR:U1']).toBe(true);
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('does not run when two phases are the same', () => {
+    const wires = connect(...main()).map((wire) =>
+      wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:V2' } : wire,
+    );
+    expect(simulate(wires, {}, true).motors.MOTOR).toBe(false);
+  });
+
+  it('still runs when all three phases are present', () => {
+    expect(simulate(connect(...main()), {}, true).motors.MOTOR).toBe(true);
+  });
+});
