@@ -287,3 +287,13 @@ describe('default observation target', () => {
     expect(preferredLoadId(wires, 'HL1')).toBe('HL1');
   });
 });
+
+describe('partial motor copy', () => {
+  it('reports a missing phase as partial, with strings in both languages', () => {
+    const wires = example('motor-self-hold').filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, { SB2: true }, true);
+    expect(traceLoad(wires, state, true, 'MOTOR').status).toBe('partial');
+  });
+});

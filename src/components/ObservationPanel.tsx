@@ -251,6 +251,7 @@ export default function ObservationPanel({
               })}
             </p>
             {keptOn && <p>{t('learning.keptOn', { id: trace.loadId })}</p>}
+            {trace.status === 'partial' && <p>{t('learning.partialHint')}</p>}
           </>
         ) : (
           <p>
