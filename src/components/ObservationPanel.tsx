@@ -125,6 +125,9 @@ export default function ObservationPanel({
     ...difference.lamps.map((change) =>
       t(change.to ? 'learning.lampOn' : 'learning.lampOff', { id: change.id }),
     ),
+    ...difference.motors.map((change) =>
+      t(change.to ? 'learning.motorOn' : 'learning.motorOff', { id: change.id }),
+    ),
     ...(difference.closedContacts.length
       ? [t('learning.closed', { contacts: difference.closedContacts.join(', ') })]
       : []),

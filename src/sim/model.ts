@@ -70,11 +70,11 @@ export const DEVICES: Device[] = [
   })),
   {
     id: 'MOTOR',
-    name: '电机接线区 · 预留',
+    name: '三相异步电机接线盒',
     kind: 'motor',
     terminals: ['U1', 'V1', 'W1', 'U2', 'V2', 'W2'],
   },
-  { id: 'POWER', name: '教学控制电源', kind: 'supply', terminals: ['U2', 'V2', 'W2', 'L', 'N'] },
+  { id: 'POWER', name: '教学电源', kind: 'supply', terminals: ['U2', 'V2', 'W2', 'L', 'N'] },
 ];
 
 export const DEVICE_MAP: Record<string, Device> = Object.fromEntries(
@@ -167,10 +167,30 @@ export const CONTACTS: Contact[] = DEVICES.flatMap((device) => {
 
 export interface Load {
   deviceId: string;
-  kind: 'coil' | 'lamp';
+  kind: 'coil' | 'lamp' | 'winding';
   from: string;
   to: string;
 }
+
+/**
+ * One motor winding behaves as a load, never as a conductor. The star point of
+ * a Y connection is therefore a node of its own, exactly as on a real terminal
+ * box: the user decides Y or delta by wiring the six terminals.
+ */
+export const MOTOR_WINDINGS: Load[] = [
+  ['U1', 'U2'],
+  ['V1', 'V2'],
+  ['W1', 'W2'],
+].map(([from, to]) => ({
+  deviceId: 'MOTOR',
+  kind: 'winding' as const,
+  from: `MOTOR:${from}`,
+  to: `MOTOR:${to}`,
+}));
+
+export const MOTOR_IDS = DEVICES.filter((device) => device.kind === 'motor').map(
+  (device) => device.id,
+);
 
 export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
   if (device.kind === 'contactor')
@@ -180,7 +200,5 @@ export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
   return [];
 });
 
-/** Motor terminals stay reserved in Phase 1; the three-phase supply itself is simulated. */
-export const UNSUPPORTED_TERMINALS = new Set([
-  ...DEVICE_MAP.MOTOR.terminals.map((label) => `MOTOR:${label}`),
-]);
+/** Loads that the divider check must see: control loads plus the three motor windings. */
+export const ALL_LOADS: Load[] = [...LOADS, ...MOTOR_WINDINGS];

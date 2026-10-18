@@ -51,6 +51,7 @@ export interface SimulationDifference {
   inputs: BooleanStateChange[];
   coils: BooleanStateChange[];
   lamps: BooleanStateChange[];
+  motors: BooleanStateChange[];
   closedContacts: string[];
   openedContacts: string[];
   powerChanged: boolean;
@@ -187,6 +188,7 @@ export function diffSimulationStates(
       inputs: [],
       coils: [],
       lamps: [],
+      motors: [],
       closedContacts: [],
       openedContacts: [],
       powerChanged: false,
@@ -198,6 +200,7 @@ export function diffSimulationStates(
     inputs: booleanChanges(previous.inputs, next.inputs),
     coils: booleanChanges(previous.result.coils, next.result.coils),
     lamps: booleanChanges(previous.result.lamps, next.result.lamps),
+    motors: booleanChanges(previous.result.motors, next.result.motors),
     closedContacts: next.result.closedContacts.filter((id) => !beforeContacts.has(id)),
     openedContacts: previous.result.closedContacts.filter((id) => !afterContacts.has(id)),
     powerChanged: previous.powered !== next.powered,

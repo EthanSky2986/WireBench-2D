@@ -60,6 +60,8 @@ export const zh = {
   'learning.coilOff': '{id} 线圈失电',
   'learning.lampOn': '{id} 亮起',
   'learning.lampOff': '{id} 熄灭',
+  'learning.motorOn': '{id} 开始运转',
+  'learning.motorOff': '{id} 停止运转',
   'learning.closed': '闭合：{contacts}',
   'learning.opened': '断开：{contacts}',
   'learning.faultChanged': '故障状态发生变化。',

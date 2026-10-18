@@ -379,14 +379,6 @@ describe('fault detection and useful localization', () => {
     expect(simulate(connect(['POWER:L', 'POWER:N']), {}, false).fault).toBeNull();
   });
 
-  it('rejects the motor reserved terminals explicitly', () => {
-    for (const terminal of ['MOTOR:U1', 'MOTOR:U2', 'MOTOR:W2']) {
-      const state = simulate(connect([terminal, 'KM1:L1']), {}, true);
-      expect(state.fault?.kind).toBe('unsupported');
-      expect(state.fault?.terminals).toContain(terminal);
-    }
-  });
-
   it('detects coil chatter caused by its own normally closed contact', () => {
     const state = simulate(
       connect(['POWER:L', 'KM1:61'], ['KM1:62', 'KM1:A1'], ['KM1:A2', 'POWER:N']),
@@ -472,5 +464,105 @@ describe('three-phase main supply', () => {
     expect(state.fault?.descriptor.code).toBe('message.fault.short');
     expect(state.fault?.wireIds).toEqual(['w1']);
     expect(state.fault?.terminals).toEqual(['POWER:L', 'POWER:N']);
+  });
+});
+
+describe('motor load', () => {
+  // U/V/W main circuit through KM1 with a user-wired star point on U2/V2/W2.
+  const yCircuit = (star: 'Y' | 'delta' | 'none' = 'Y', contactor: boolean = true): Wire[] => {
+    const main: [string, string][] = [
+      ['POWER:U2', 'KM1:L1'],
+      ['KM1:T1', 'MOTOR:U1'],
+      ['POWER:V2', 'KM1:L2'],
+      ['KM1:T2', 'MOTOR:V1'],
+      ['POWER:W2', 'KM1:L3'],
+      ['KM1:T3', 'MOTOR:W1'],
+    ];
+    const coil: [string, string][] = contactor
+      ? [
+          ['POWER:L', 'KM1:A1'],
+          ['KM1:A2', 'POWER:N'],
+        ]
+      : [];
+    const ends: [string, string][] =
+      star === 'Y'
+        ? [
+            ['MOTOR:U2', 'MOTOR:V2'],
+            ['MOTOR:V2', 'MOTOR:W2'],
+          ]
+        : star === 'delta'
+          ? [
+              ['MOTOR:U1', 'MOTOR:W2'],
+              ['MOTOR:V1', 'MOTOR:U2'],
+              ['MOTOR:W1', 'MOTOR:V2'],
+            ]
+          : [];
+    return connect(...main, ...coil, ...ends);
+  };
+
+  it('exposes the motor terminals instead of reporting a reserved area', () => {
+    const state = simulate(connect(['MOTOR:U1', 'POWER:U2']), {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('runs a Y-connected motor while the contactor holds, and stops when it releases', () => {
+    const running = simulate(yCircuit('Y'), {}, true);
+    expect(running.fault).toBeNull();
+    expect(running.coils.KM1).toBe(true);
+    expect(running.motors.MOTOR).toBe(true);
+    const stopped = simulate(yCircuit('Y', false), {}, true);
+    expect(stopped.coils.KM1).toBe(false);
+    expect(stopped.motors.MOTOR).toBe(false);
+  });
+
+  it('runs a delta-connected motor wired by the user', () => {
+    const state = simulate(yCircuit('delta'), {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(true);
+  });
+
+  it('does not run with a missing phase', () => {
+    const wires = yCircuit('Y').filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('does not run while both ends of a winding sit on the same potential', () => {
+    const wires = [
+      ...yCircuit('Y'),
+      { id: 'shunt', from: 'MOTOR:U1', to: 'MOTOR:U2', color: '#000' },
+    ];
+    const state = simulate(wires, {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('does not run from a single-phase L/N feed', () => {
+    const state = simulate(
+      connect(
+        ['POWER:L', 'KM1:A1'],
+        ['KM1:A2', 'POWER:N'],
+        ['POWER:L', 'MOTOR:U1'],
+        ['POWER:N', 'MOTOR:U2'],
+      ),
+      {},
+      true,
+    );
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('leaves L-N short detection and coil behaviour untouched', () => {
+    const state = simulate(
+      connect(['POWER:L', 'POWER:N'], ['POWER:U2', 'MOTOR:U1'], ['MOTOR:U2', 'MOTOR:V2']),
+      {},
+      true,
+    );
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.descriptor.code).toBe('message.fault.short');
+    expect(state.motors.MOTOR).toBe(false);
   });
 });

@@ -37,7 +37,6 @@ describe('localized domain messages', () => {
       'message.fault.unstable',
       wires(['POWER:L', 'KM1:61'], ['KM1:62', 'KM1:A1'], ['KM1:A2', 'POWER:N']),
     ],
-    ['message.fault.reserved', wires(['MOTOR:U1', 'KM1:L1'])],
     ['message.fault.unknown-terminal', wires(['POWER:L', 'MISSING:1'])],
   ])('formats %s in either language without changing the electrical result', (code, circuit) => {
     const result = simulate(circuit, {}, true);

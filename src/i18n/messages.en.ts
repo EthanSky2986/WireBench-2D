@@ -13,8 +13,6 @@ export const en = {
     '{devices} form a series-load or voltage-divider circuit. This version supports loads connected independently across the control supply. Use parallel branches instead.',
   'message.fault.unknown-terminal':
     'The wiring file contains unrecognized terminals and cannot be simulated. Check or remove the highlighted wires.',
-  'message.fault.reserved':
-    'The three-phase supply and motor terminals are reserved and are not simulated in this version. Use POWER:L / POWER:N for control experiments.',
   'message.fault.unstable':
     '{devices} repeatedly energize and release, so the circuit cannot settle. Check coils controlled by their own NC contacts or by each other.',
   'message.project.invalid-object': '{subject} has an invalid structure.',

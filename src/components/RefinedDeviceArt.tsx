@@ -595,11 +595,23 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
               </text>
             </g>
           ))}
+          <g transform="translate(80 127)">
+            <circle r="6.4" fill={fill('bevel')} stroke="#758087" strokeWidth="0.9" />
+            <g className={`motor-rotor${active ? ' is-running' : ''}`}>
+              <path
+                d="M 0 -4.6 V 4.6 M -4.6 0 H 4.6 M -3.25 -3.25 L 3.25 3.25 M 3.25 -3.25 L -3.25 3.25"
+                stroke="#eeeadb"
+                strokeWidth="1.1"
+                strokeLinecap="round"
+              />
+              <circle r="1.2" fill="#eeeadb" />
+            </g>
+          </g>
           <text
             x="80"
-            y="138"
+            y="142"
             textAnchor="middle"
-            fill="#48555b"
+            fill="#333f46"
             fontSize={locale === 'en' ? 7 : 8}
             fontWeight="600"
           >

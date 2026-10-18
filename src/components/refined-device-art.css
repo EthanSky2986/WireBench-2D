@@ -83,3 +83,24 @@
     --refined-transition: 0ms;
   }
 }
+
+/* A running motor turns its rotor marker; a stopped one keeps it still. */
+.motor-rotor {
+  transform-origin: 0 0;
+}
+
+.motor-rotor.is-running {
+  animation: motor-rotor-spin 1.8s linear infinite;
+}
+
+@keyframes motor-rotor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motor-rotor.is-running {
+    animation: none;
+  }
+}

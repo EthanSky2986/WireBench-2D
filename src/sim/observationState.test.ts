@@ -250,6 +250,7 @@ describe('action observation history', () => {
       inputs: [],
       coils: [],
       lamps: [],
+      motors: [],
       closedContacts: [],
       openedContacts: [],
       powerChanged: false,

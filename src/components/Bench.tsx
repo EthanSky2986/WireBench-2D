@@ -17,7 +17,7 @@ import {
   localizeDevice,
 } from '../layout';
 import type { Point } from '../layout';
-import { DEVICE_MAP, UNSUPPORTED_TERMINALS } from '../sim/model';
+import { DEVICE_MAP } from '../sim/model';
 import type { Wire } from '../sim/model';
 import type { SimulationResult } from '../sim/engine';
 import type { LoadTrace } from '../sim/loadTrace';
@@ -513,7 +513,12 @@ export default function Bench(p: Props) {
               active =
                 d.kind === 'supply'
                   ? p.powered
-                  : !!(p.result.coils[d.id] || p.result.lamps[d.id] || p.inputs[d.id]),
+                  : !!(
+                      p.result.coils[d.id] ||
+                      p.result.lamps[d.id] ||
+                      p.result.motors[d.id] ||
+                      p.inputs[d.id]
+                    ),
               operable = ['button', 'limit', 'estop'].includes(d.kind);
             return (
               <g key={d.id}>
@@ -665,7 +670,7 @@ export default function Bench(p: Props) {
                     </text>
                   </>
                 )}
-                {d.kind === 'contactor' && (
+                {(d.kind === 'contactor' || d.kind === 'motor') && (
                   <g transform={`translate(${part.labelX - 40} ${part.y + part.size + 9})`}>
                     <circle
                       cx="0"
@@ -674,7 +679,13 @@ export default function Bench(p: Props) {
                       fill={active ? 'var(--accent)' : 'var(--board-text-muted)'}
                     />
                     <text x="11" y="5" className={`state-label ${active ? 'on' : ''}`}>
-                      {active ? t('bench.coilOn') : t('bench.coilOff')}
+                      {d.kind === 'contactor'
+                        ? active
+                          ? t('bench.coilOn')
+                          : t('bench.coilOff')
+                        : active
+                          ? t('bench.motorRunning')
+                          : t('bench.motorStopped')}
                     </text>
                   </g>
                 )}
@@ -848,8 +859,7 @@ export default function Bench(p: Props) {
           {SOCKETS.map((s) => {
             const potential = p.result.potential[s.id],
               connected = counts[s.id] > 0,
-              selected = p.pending === s.id || hover === s.id,
-              unsupported = UNSUPPORTED_TERMINALS.has(s.id);
+              selected = p.pending === s.id || hover === s.id;
             return (
               <g
                 key={s.id}
@@ -930,7 +940,6 @@ export default function Bench(p: Props) {
                 {connected && <circle cx={s.x} cy={s.y} r="1.5" fill="#e6ede2" />}
                 <title>
                   {s.id}
-                  {unsupported ? t('bench.reservedSuffix') : ''}
                   {counts[s.id] ? t('bench.wireCountSuffix', { count: counts[s.id] }) : ''}
                 </title>
               </g>
@@ -995,18 +1004,16 @@ export default function Bench(p: Props) {
           <Cable size={13} />
           <strong>{hover.replace(':', ' · ')}</strong>
           <span>
-            {UNSUPPORTED_TERMINALS.has(hover)
-              ? t('bench.reserved')
-              : p.powered
-                ? t('bench.potential', {
-                    value:
-                      p.result.potential[hover] === 'floating'
-                        ? t('bench.floating')
-                        : p.result.potential[hover],
-                  })
-                : p.pending
-                  ? t('bench.connect')
-                  : t('bench.startWire')}
+            {p.powered
+              ? t('bench.potential', {
+                  value:
+                    p.result.potential[hover] === 'floating'
+                      ? t('bench.floating')
+                      : p.result.potential[hover],
+                })
+              : p.pending
+                ? t('bench.connect')
+                : t('bench.startWire')}
           </span>
         </div>
       )}

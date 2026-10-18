@@ -1,12 +1,15 @@
 import {
+  ALL_LOADS,
   CONTACTS,
   DEVICE_MAP,
   DEVICES,
   LOADS,
+  MOTOR_IDS,
+  MOTOR_WINDINGS,
   RAIL_IDS,
   SUPPLY_RAILS,
   TERMINAL_IDS,
-  UNSUPPORTED_TERMINALS,
+  isPhase,
 } from './model';
 import type { Contact, Load, Rail, Wire } from './model';
 import { messageDetails, type MessageDescriptor } from '../i18n/messages';
@@ -24,6 +27,8 @@ export interface SimulationFault {
 export interface SimulationResult {
   coils: Record<string, boolean>;
   lamps: Record<string, boolean>;
+  /** A motor runs only while every winding carries a phase-to-phase voltage. */
+  motors: Record<string, boolean>;
   closedContacts: string[];
   /** Connection to a rail through wires/closed contacts, not a voltage measurement. */
   potential: Record<string, Potential>;
@@ -200,7 +205,7 @@ function shortCircuit(network: Network): SimulationFault | null {
  */
 function unsupportedLoadNetwork(network: Network, wires: Wire[]): SimulationFault | null {
   const loadGraph = new Map<number, { to: number; load: Load }[]>();
-  for (const load of LOADS) {
+  for (const load of ALL_LOADS) {
     const from = network.component.get(load.from)!;
     const to = network.component.get(load.to)!;
     if (from === to) continue;
@@ -255,6 +260,52 @@ function poweredLoad(load: Load, network: Network): boolean {
   );
 }
 
+/**
+ * A star point is a node shared by at least two different windings that is tied
+ * to no supply rail. Wiring U2/V2/W2 together (Y) creates it: a winding is a
+ * load and not a conductor, so the node stays floating in the terminal map
+ * while the winding between it and a phase still spans two phases.
+ */
+function starComponents(network: Network): Set<number> {
+  const windingsByComponent = new Map<number, Set<number>>();
+  MOTOR_WINDINGS.forEach((winding, index) => {
+    for (const terminal of [winding.from, winding.to]) {
+      const component = network.component.get(terminal)!;
+      const windings = windingsByComponent.get(component) ?? new Set<number>();
+      windings.add(index);
+      windingsByComponent.set(component, windings);
+    }
+  });
+  const star = new Set<number>();
+  for (const [component, windings] of windingsByComponent) {
+    if (windings.size >= 2 && !network.railOf.has(component)) star.add(component);
+  }
+  return star;
+}
+
+/** One winding: two different phases at its ends, or one phase and the motor star point. */
+function windingEnergized(winding: Load, network: Network, star: Set<number>): boolean {
+  const from = network.component.get(winding.from)!;
+  const to = network.component.get(winding.to)!;
+  if (from === to) return false;
+  const fromRail = network.railOf.get(from);
+  const toRail = network.railOf.get(to);
+  const fromPhase = fromRail && isPhase(fromRail) ? fromRail : null;
+  const toPhase = toRail && isPhase(toRail) ? toRail : null;
+  if (fromPhase && toPhase) return fromPhase !== toPhase;
+  if (fromPhase && star.has(to)) return true;
+  if (toPhase && star.has(from)) return true;
+  // A single-phase L/N feed, an open winding and two ends on one node all stop.
+  return false;
+}
+
+function motorStates(network: Network): Record<string, boolean> {
+  const star = starComponents(network);
+  // A rotating field needs all three windings; one missing phase opens the motor.
+  const running = MOTOR_WINDINGS.every((winding) => windingEnergized(winding, network, star));
+  return Object.fromEntries(MOTOR_IDS.map((id) => [id, running]));
+}
+
 function stopped(
   inputs: Record<string, boolean>,
   fault: SimulationFault | null = null,
@@ -263,6 +314,7 @@ function stopped(
   return {
     coils,
     lamps: allFalse(LAMP_IDS),
+    motors: allFalse(MOTOR_IDS),
     closedContacts: getClosedContacts(coils, inputs).map((contact) => contact.id),
     potential: Object.fromEntries(
       TERMINAL_IDS.map((terminal) => [terminal, 'floating' as Potential]),
@@ -299,23 +351,6 @@ export function simulate(
         ),
       ],
       wireIds: invalid.map((wire) => wire.id),
-    });
-
-  const unsupported = wires.filter(
-    (wire) => UNSUPPORTED_TERMINALS.has(wire.from) || UNSUPPORTED_TERMINALS.has(wire.to),
-  );
-  if (unsupported.length)
-    return stopped(inputs, {
-      kind: 'unsupported',
-      ...messageDetails({ code: 'message.fault.reserved' }),
-      terminals: [
-        ...new Set(
-          unsupported
-            .flatMap((wire) => [wire.from, wire.to])
-            .filter((terminal) => UNSUPPORTED_TERMINALS.has(terminal)),
-        ),
-      ],
-      wireIds: unsupported.map((wire) => wire.id),
     });
 
   let coils = Object.fromEntries(COIL_IDS.map((id) => [id, !!previousCoils[id]]));
@@ -360,6 +395,7 @@ export function simulate(
       return {
         coils: next,
         lamps,
+        motors: motorStates(network),
         closedContacts: contacts.map((contact) => contact.id),
         potential,
         fault: null,

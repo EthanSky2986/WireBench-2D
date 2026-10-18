@@ -67,6 +67,8 @@ export const en = {
   'learning.coilOff': '{id} coil de-energized',
   'learning.lampOn': '{id} lit',
   'learning.lampOff': '{id} went out',
+  'learning.motorOn': '{id} starts running',
+  'learning.motorOff': '{id} stops running',
   'learning.closed': 'Closed: {contacts}',
   'learning.opened': 'Opened: {contacts}',
   'learning.faultChanged': 'The fault state changed.',

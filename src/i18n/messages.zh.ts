@@ -11,8 +11,6 @@ export const zh = {
     '{devices} 构成负载串联或分压网络；首版只计算独立跨接控制电源的负载，请改用并联支路。',
   'message.fault.unknown-terminal':
     '接线文件包含无法识别的端子，不能进行仿真。请检查或删除标出的线路。',
-  'message.fault.reserved':
-    '三相电源与电机端子为预留区域，首版暂不计算这类接法。控制实验请使用 POWER:L / POWER:N。',
   'message.fault.unstable':
     '{devices} 出现反复吸合与释放，回路无法稳定。请检查线圈与自身常闭触点或互相控制的接法。',
   'message.project.invalid-object': '{subject}格式不正确。',

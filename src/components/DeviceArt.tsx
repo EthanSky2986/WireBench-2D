@@ -559,6 +559,18 @@ export function DeviceArt({ kind, id, active = false, tripped = false }: DeviceA
             strokeWidth="1.5"
           />
           <rect x="35" y="37" width="90" height="79" rx="2" fill="#8a8170" />
+          <g transform="translate(80 127)">
+            <circle r="6" fill="#333f37" stroke="#8d9b8c" strokeWidth="0.8" />
+            <g className={`motor-rotor${active ? ' is-running' : ''}`}>
+              <path
+                d="M 0 -4.4 V 4.4 M -4.4 0 H 4.4 M -3.1 -3.1 L 3.1 3.1 M 3.1 -3.1 L -3.1 3.1"
+                stroke="#e5e2cf"
+                strokeWidth="1.1"
+                strokeLinecap="round"
+              />
+              <circle r="1.1" fill="#e5e2cf" />
+            </g>
+          </g>
           {[49, 80, 111].map((x, i) => (
             <g key={x}>
               <text x={x} y="49" textAnchor="middle" fill="#e5e2cf" fontFamily={mono} fontSize="7">
@@ -575,9 +587,9 @@ export function DeviceArt({ kind, id, active = false, tripped = false }: DeviceA
           ))}
           <text
             x="80"
-            y="138"
+            y="142"
             textAnchor="middle"
-            fill="#52644f"
+            fill="#3f5240"
             fontSize={locale === 'en' ? 7 : 8}
             fontWeight="600"
           >
