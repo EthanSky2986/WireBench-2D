@@ -42,10 +42,10 @@ export const zh = {
   'learning.status.unconnected': '未形成完整供电通路',
   'learning.status.same-rail': '两端接在同一电源母线上',
   'learning.status.partial': '只有部分绕组得电，电机不转',
-  'learning.floating': '未接通 L/N',
+  'learning.floating': '未接通电源母线',
   'learning.unpoweredHint': '接通电源后可观察当前接线的供电关系。',
   'learning.unconnectedHint': '至少一端没有接通电源母线。检查实际接线与触点状态。',
-  'learning.sameRailHint': '负载需要分别接通 L 与 N；两端同接 L 或同接 N 不会得电。',
+  'learning.sameRailHint': '负载两端需要跨接两条不同母线；两端在同一条母线上不会得电。',
   'learning.partialHint':
     '电机要三个绕组都跨接两条不同相线才运转。下面标出已经得电的绕组；检查缺失的那一相、KM 主触点或星点连线。',
   'learning.faultHint':
@@ -69,7 +69,7 @@ export const zh = {
   'learning.closed': '闭合：{contacts}',
   'learning.opened': '断开：{contacts}',
   'learning.faultChanged': '故障状态发生变化。',
-  'learning.keptOn': '{id} 在这一步前后均得电；下方通路显示动作后仍然接通 L/N 的连接。',
+  'learning.keptOn': '{id} 在这一步前后均得电；下方通路显示动作后仍然接通电源母线的连接。',
   'learning.pathChanges': '供电通路变化',
   'learning.wiresAdded': '加入通路的导线（{count}）',
   'learning.wiresRemoved': '退出通路的导线（{count}）',

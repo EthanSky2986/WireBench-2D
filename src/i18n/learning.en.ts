@@ -48,14 +48,14 @@ export const en = {
   'learning.status.unconnected': 'No complete supply path',
   'learning.status.partial': 'Only some windings are energized, so the motor does not turn',
   'learning.status.same-rail': 'Both ends connect to the same rail',
-  'learning.floating': 'Not connected to L/N',
+  'learning.floating': 'Not on a supply rail',
   'learning.unpoweredHint': 'Turn on the power to inspect the supply connections in this wiring.',
   'learning.unconnectedHint':
     'At least one end is not connected to a supply rail. Check the wiring and contact states.',
   'learning.partialHint':
     'The motor turns only while all three windings span two different phases. The energized windings are highlighted below; check the missing phase, the KM main contacts, or the star point wiring.',
   'learning.sameRailHint':
-    'The load needs one connection to L and one to N. Two L connections or two N connections do not energize it.',
+    'The load needs its two ends on different supply rails. Two ends on the same rail do not energize it.',
   'learning.faultHint':
     'Devices show the stopped state. Fault markers preserve evidence from when the fault occurred; they are not the present supply paths.',
   'learning.traceHint':
@@ -78,7 +78,7 @@ export const en = {
   'learning.opened': 'Opened: {contacts}',
   'learning.faultChanged': 'The fault state changed.',
   'learning.keptOn':
-    '{id} was energized before and after this step. The paths below show the connections to L/N that remain after the action.',
+    '{id} was energized before and after this step. The paths below show the supply-rail connections that remain after the action.',
   'learning.pathChanges': 'Supply path changes',
   'learning.wiresAdded': 'Wires entering the paths ({count})',
   'learning.wiresRemoved': 'Wires leaving the paths ({count})',
