@@ -566,3 +566,58 @@ describe('motor load', () => {
     expect(state.motors.MOTOR).toBe(false);
   });
 });
+
+describe('contactor self-holding with a motor example', () => {
+  const wiresOfExample = () => example('motor-self-hold');
+
+  it('starts the motor through SB2, holds after release, and stops with SB1', () => {
+    const wires = wiresOfExample();
+    const initial = simulate(wires, {}, true);
+    expect(initial.fault).toBeNull();
+    expect(initial.coils.KM1).toBe(false);
+    expect(initial.motors.MOTOR).toBe(false);
+
+    const starting = simulate(wires, { SB2: true }, true, initial.coils);
+    expect(starting.coils.KM1).toBe(true);
+    expect(starting.motors.MOTOR).toBe(true);
+
+    const holding = simulate(wires, {}, true, starting.coils);
+    expect(holding.coils.KM1).toBe(true);
+    expect(holding.motors.MOTOR).toBe(true);
+
+    const stopped = simulate(wires, { SB1: true }, true, holding.coils);
+    expect(stopped.coils.KM1).toBe(false);
+    expect(stopped.motors.MOTOR).toBe(false);
+    expect(simulate(wires, {}, true, stopped.coils).motors.MOTOR).toBe(false);
+  });
+
+  it('cannot hold without the actual self-holding wire', () => {
+    const wires = wiresOfExample().filter((wire) => wire.from !== 'KM1:14');
+    const starting = simulate(wires, { SB2: true }, true);
+    expect(starting.motors.MOTOR).toBe(true);
+    const released = simulate(wires, {}, true, starting.coils);
+    expect(released.coils.KM1).toBe(false);
+    expect(released.motors.MOTOR).toBe(false);
+  });
+
+  it('runs through the same rules: removing a phase stops the motor', () => {
+    const wires = wiresOfExample().filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, { SB2: true }, true);
+    expect(state.fault).toBeNull();
+    expect(state.coils.KM1).toBe(true);
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('reports a phase short instead of running when two phases are joined', () => {
+    const wires = [
+      ...wiresOfExample(),
+      { id: 'cross', from: 'KM1:T1', to: 'KM1:T2', color: '#000' },
+    ];
+    const state = simulate(wires, { SB2: true }, true);
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.wireIds).toContain('cross');
+    expect(state.motors.MOTOR).toBe(false);
+  });
+});

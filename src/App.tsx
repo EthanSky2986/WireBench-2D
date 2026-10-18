@@ -92,6 +92,11 @@ const EXAMPLE_KEYS: Record<string, Record<'name' | 'subtitle' | 'description', T
     subtitle: 'ui.example.self-hold.subtitle',
     description: 'ui.example.self-hold.description',
   },
+  'motor-self-hold': {
+    name: 'ui.example.motor-self-hold.name',
+    subtitle: 'ui.example.motor-self-hold.subtitle',
+    description: 'ui.example.motor-self-hold.description',
+  },
 };
 
 function observationTarget(wires: Wire[], preferred: string | null): string {

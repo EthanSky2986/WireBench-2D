@@ -42,6 +42,10 @@ export const zh = {
   'ui.example.self-hold.subtitle': '启动 · 保持 · 停止',
   'ui.example.self-hold.description':
     'SB2 启动，KM1 自锁，HL2 运行灯亮；SB1、急停或 FR1 测试切断线圈回路。HL1 显示待机，HL3 显示 FR1 跳闸。',
+  'ui.example.motor-self-hold.name': '接触器自锁 + 电机',
+  'ui.example.motor-self-hold.subtitle': '三相主回路 · Y 接法',
+  'ui.example.motor-self-hold.description':
+    'SB2 启动，KM1 自锁，三相主回路经 KM1 主触点给电机供电，电机运转；SB1 断开控制回路后 KM1 释放，电机停止。U2/V2/W2 已短接成星点（Y 接法），可自行改接成 Δ。',
   'ui.heading.tagline': '把电路接起来，让原理看得见。',
   'ui.heading.running': '运行观察',
   'ui.heading.editing': '自由接线',

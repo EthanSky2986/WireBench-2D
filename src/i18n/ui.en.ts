@@ -44,6 +44,10 @@ export const en = {
   'ui.example.self-hold.subtitle': 'Start · Hold · Stop',
   'ui.example.self-hold.description':
     'SB2 starts and latches KM1; HL2 indicates operation. SB1, the emergency stop, or the FR1 test opens the coil circuit. HL1 indicates standby; HL3 indicates an FR1 trip.',
+  'ui.example.motor-self-hold.name': 'Self-holding contactor + motor',
+  'ui.example.motor-self-hold.subtitle': 'Three-phase main circuit · Y',
+  'ui.example.motor-self-hold.description':
+    'SB2 starts and latches KM1, whose main contacts feed the motor; the motor runs. SB1 opens the control circuit, KM1 releases, and the motor stops. U2/V2/W2 are already shorted into a star point (Y); rewire them into a delta to compare.',
   'ui.heading.tagline': 'Wire the circuit. See how it works.',
   'ui.heading.running': 'Simulation',
   'ui.heading.editing': 'Wiring',
