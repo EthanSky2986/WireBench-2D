@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { useI18n } from '../i18n';
+import './refined-device-art.css';
 
 export type DeviceArtKind =
   'contactor' | 'thermal' | 'button' | 'limit' | 'estop' | 'lamp' | 'motor' | 'supply';
@@ -69,7 +70,7 @@ export function DeviceArt({ kind, id, active = false, tripped = false }: DeviceA
   }[tone];
 
   return (
-    <g aria-hidden="true" className={`device-art device-art--${kind}`}>
+    <g aria-hidden="true" className={`device-art device-art--${kind}${active ? ' is-active' : ''}`}>
       <defs>
         <linearGradient id={`${uid}-housing`} x1="0" y1="0" x2="0.8" y2="1">
           <stop offset="0" stopColor="#737f7b" />
@@ -535,56 +536,54 @@ export function DeviceArt({ kind, id, active = false, tripped = false }: DeviceA
 
       {kind === 'motor' && (
         <g>
-          <rect x="12" y="15" width="136" height="135" rx="7" fill="#284035" opacity="0.13" />
-          <rect
-            x="10"
-            y="10"
-            width="140"
-            height="135"
-            rx="6"
-            fill={g('panel')}
-            stroke="#96a89a"
-            strokeWidth="1.2"
-          />
-          <Screw x={21} y={22} radius={3.5} />
-          <Screw x={139} y={132} radius={3.5} />
-          <rect
-            x="29"
-            y="31"
-            width="102"
-            height="91"
-            rx="3"
-            fill="#333f37"
-            stroke="#8d9b8c"
-            strokeWidth="1.5"
-          />
-          <rect x="35" y="37" width="90" height="79" rx="2" fill="#8a8170" />
-          <g transform="translate(80 127)">
-            <circle r="6" fill="#333f37" stroke="#8d9b8c" strokeWidth="0.8" />
-            <g className={`motor-rotor${active ? ' is-running' : ''}`}>
-              <path
-                d="M 0 -4.4 V 4.4 M -4.4 0 H 4.4 M -3.1 -3.1 L 3.1 3.1 M 3.1 -3.1 L -3.1 3.1"
-                stroke="#e5e2cf"
-                strokeWidth="1.1"
-                strokeLinecap="round"
-              />
-              <circle r="1.1" fill="#e5e2cf" />
+          <rect x="12" y="119" width="136" height="10" rx="3" fill="#284035" opacity="0.13" />
+          <rect x="16" y="112" width="20" height="10" rx="2" fill="#5b6a63" stroke="#33453c" />
+          <rect x="82" y="112" width="20" height="10" rx="2" fill="#5b6a63" stroke="#33453c" />
+          <rect x="12" y="48" width="106" height="68" rx="10" fill="#3f5f7a" stroke="#2b4557" />
+          {[24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112].map((x) => (
+            <path key={x} d={`M ${x} 51 V 113`} stroke="#2f4c63" strokeWidth="1.4" opacity="0.5" />
+          ))}
+          <path d="M 16 54 H 74" stroke="#a9c2d3" strokeWidth="1.8" opacity="0.5" />
+          <path d="M 16 110 H 114" stroke="#263f52" strokeWidth="1.6" opacity="0.55" />
+          <rect x="22" y="60" width="27" height="42" rx="1.5" fill="#e9ece4" stroke="#8d9a8d" />
+          <path d="M 25 65 H 44" stroke="#3f4a3f" strokeWidth="1.8" />
+          {[71, 77, 83, 89, 95].map((y) => (
+            <path key={y} d={`M 25 ${y} H 45`} stroke="#7f8b7f" strokeWidth="0.9" opacity="0.8" />
+          ))}
+          <rect x="54" y="24" width="46" height="28" rx="3" fill="#1d2225" stroke="#0b0f11" />
+          <rect x="57" y="27" width="40" height="17" rx="2" fill="#2f373c" />
+          <circle cx="95" cy="46.5" r="2" fill="#b9963f" />
+          <circle cx="59" cy="46.5" r="2" fill="#b9963f" />
+          <rect x="112" y="76" width="14" height="9" rx="2" fill="#9baaa2" stroke="#5d6a72" />
+          <circle cx="130" cy="81" r="27" fill="#61707a" stroke="#2b4557" strokeWidth="1.6" />
+          <circle cx="130" cy="81" r="21" fill="#16232c" />
+          <g transform="translate(130 81)">
+            <g className={`motor-fan${active ? ' is-running' : ''}`}>
+              {[0, 120, 240].map((angle) => (
+                <path
+                  key={angle}
+                  d="M 0 -3.4 C 8 -14 17 -11 16.2 -3.2 C 15.4 4.4 7 7.4 0 -3.4 Z"
+                  fill="#a9bcc7"
+                  opacity="0.9"
+                  transform={`rotate(${angle})`}
+                />
+              ))}
+              <circle r="5" fill="#39464e" stroke="#8d9aa3" strokeWidth="1.2" />
+              <circle r="1.4" fill="#cfd8dd" />
             </g>
           </g>
-          {[49, 80, 111].map((x, i) => (
-            <g key={x}>
-              <text x={x} y="49" textAnchor="middle" fill="#e5e2cf" fontFamily={mono} fontSize="7">
-                {['U1', 'V1', 'W1'][i]}
-              </text>
-              <circle cx={x} cy="63" r="9" fill="#bda35c" stroke="#655b38" />
-              <Screw x={x} y={63} radius={4} />
-              <circle cx={x} cy="94" r="9" fill="#bda35c" stroke="#655b38" />
-              <Screw x={x} y={94} radius={4} />
-              <text x={x} y="111" textAnchor="middle" fill="#e5e2cf" fontFamily={mono} fontSize="7">
-                {['U2', 'V2', 'W2'][i]}
-              </text>
-            </g>
+          <circle cx="130" cy="81" r="27" fill="none" stroke="#7c8992" strokeWidth="1.8" />
+          {[0, 60, 120, 180, 240, 300].map((angle) => (
+            <path
+              key={angle}
+              d="M 130 55.4 V 60.2"
+              stroke="#a3b0b8"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              transform={`rotate(${angle} 130 81)`}
+            />
           ))}
+          <circle cx="139" cy="70" r="1.7" fill="#57d6a0" className="motor-indicator" />
           <text
             x="80"
             y="142"

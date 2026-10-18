@@ -202,3 +202,10 @@ export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
 
 /** Loads that the divider check must see: control loads plus the three motor windings. */
 export const ALL_LOADS: Load[] = [...LOADS, ...MOTOR_WINDINGS];
+
+/**
+ * One entry per device a learner can pick in the observation panel. A motor is
+ * one device with three windings, so it is listed once, using its U1-U2 winding
+ * only as the identity the trace resolver re-expands.
+ */
+export const OBSERVABLE_LOADS: Load[] = [...LOADS, ...MOTOR_WINDINGS.slice(0, 1)];

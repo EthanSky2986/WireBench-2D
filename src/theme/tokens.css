@@ -49,6 +49,13 @@
   --wire-selection: #086e80;
   --learning-trace: #8355bb;
   --on-wire-selection: #ffffff;
+  /* Energized supply rails. Phases keep the usual brown/black/grey order of a
+     three-phase main circuit so a live U/V/W terminal is distinguishable. */
+  --rail-live-l: #dea947;
+  --rail-live-n: #4a85db;
+  --rail-live-u: #b2643f;
+  --rail-live-v: #4d5457;
+  --rail-live-w: #8a7a3f;
   /* Terminal plastic stays pale in both themes, so its focus ring stays dark. */
   --terminal-focus: #126546;
 }
@@ -103,4 +110,9 @@
   --wire-halo: #9baeb9;
   --wire-selection: #7fddf3;
   --on-wire-selection: #112e39;
+  --rail-live-l: #f0c25e;
+  --rail-live-n: #7fa8dd;
+  --rail-live-u: #d68a63;
+  --rail-live-v: #97a2a8;
+  --rail-live-w: #c8b568;
 }

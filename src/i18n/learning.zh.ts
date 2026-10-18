@@ -33,17 +33,21 @@ export const zh = {
   'learning.releaseMode': '切换操作模式 · 松开按钮',
   'learning.load': '观察负载',
   'learning.coil': '线圈',
+  'learning.motor': '电机',
   'learning.lamp': '指示灯',
   'learning.showTrace': '显示供电通路',
-  'learning.status.energized': '已得电：两端分别接通 L、N',
+  'learning.status.energized': '已得电：绕组两端跨接两条不同的相线或星点',
   'learning.status.unpowered': '电源已断开',
   'learning.status.fault': '故障停止 · 不显示供电通路',
   'learning.status.unconnected': '未形成完整供电通路',
   'learning.status.same-rail': '两端接在同一电源母线上',
+  'learning.status.partial': '只有部分绕组得电，电机不转',
   'learning.floating': '未接通 L/N',
   'learning.unpoweredHint': '接通电源后可观察当前接线的供电关系。',
   'learning.unconnectedHint': '至少一端没有接通电源母线。检查实际接线与触点状态。',
   'learning.sameRailHint': '负载需要分别接通 L 与 N；两端同接 L 或同接 N 不会得电。',
+  'learning.partialHint':
+    '电机要三个绕组都跨接两条不同相线才运转。下面标出已经得电的绕组；检查缺失的那一相、KM 主触点或星点连线。',
   'learning.faultHint':
     '当前器件显示停止后的状态；故障标记保留触发故障时的证据，不能当作此时的供电通路。',
   'learning.traceHint':

@@ -23,12 +23,17 @@ function wireColor(from: string, to: string): string {
   return PHASE_COLORS[from] ?? PHASE_COLORS[to] ?? YELLOW;
 }
 
-function wires(prefix: string, connections: [string, string][]): Wire[] {
-  return connections.map(([from, to], index) => ({
+/**
+ * A connection may name its own colour. Three-phase main conductors need this
+ * after a contactor: the outgoing wire no longer touches a supply terminal, yet
+ * a learner must still see which phase left T1.
+ */
+function wires(prefix: string, connections: [string, string, string?][]): Wire[] {
+  return connections.map(([from, to, color], index) => ({
     id: `${prefix}-${index + 1}`,
     from,
     to,
-    color: wireColor(from, to),
+    color: color ?? wireColor(from, to),
   }));
 }
 
@@ -94,16 +99,17 @@ export const EXAMPLES: Example[] = [
       ['SB2:NO3', 'KM1:13'],
       ['KM1:14', 'KM1:A1'],
       ['KM1:A2', 'POWER:N'],
-      // Main circuit: three phases through the contactor into the windings.
-      ['POWER:U2', 'KM1:L1'],
-      ['KM1:T1', 'MOTOR:U1'],
-      ['POWER:V2', 'KM1:L2'],
-      ['KM1:T2', 'MOTOR:V1'],
-      ['POWER:W2', 'KM1:L3'],
-      ['KM1:T3', 'MOTOR:W1'],
+      // Main circuit: three phases through the contactor into the windings. The
+      // outgoing conductors keep their phase colour so U/V/W stay traceable.
+      ['POWER:U2', 'KM1:L1', PHASE_COLORS['POWER:U2']],
+      ['KM1:T1', 'MOTOR:U1', PHASE_COLORS['POWER:U2']],
+      ['POWER:V2', 'KM1:L2', PHASE_COLORS['POWER:V2']],
+      ['KM1:T2', 'MOTOR:V1', PHASE_COLORS['POWER:V2']],
+      ['POWER:W2', 'KM1:L3', PHASE_COLORS['POWER:W2']],
+      ['KM1:T3', 'MOTOR:W1', PHASE_COLORS['POWER:W2']],
       // Y connection: the user wires the star point on the terminal box.
-      ['MOTOR:U2', 'MOTOR:V2'],
-      ['MOTOR:V2', 'MOTOR:W2'],
+      ['MOTOR:U2', 'MOTOR:V2', PHASE_COLORS['POWER:U2']],
+      ['MOTOR:V2', 'MOTOR:W2', PHASE_COLORS['POWER:V2']],
     ]),
   },
 ];

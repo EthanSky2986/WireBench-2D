@@ -29,6 +29,8 @@ export interface SimulationResult {
   lamps: Record<string, boolean>;
   /** A motor runs only while every winding carries a phase-to-phase voltage. */
   motors: Record<string, boolean>;
+  /** Per-winding result for the motor; a stopped motor names which windings are dead. */
+  windings: Record<string, boolean>;
   closedContacts: string[];
   /** Connection to a rail through wires/closed contacts, not a voltage measurement. */
   potential: Record<string, Potential>;
@@ -299,11 +301,20 @@ function windingEnergized(winding: Load, network: Network, star: Set<number>): b
   return false;
 }
 
-function motorStates(network: Network): Record<string, boolean> {
+function motorStates(network: Network): {
+  motors: Record<string, boolean>;
+  windings: Record<string, boolean>;
+} {
   const star = starComponents(network);
+  const energized = MOTOR_WINDINGS.map((winding) => windingEnergized(winding, network, star));
   // A rotating field needs all three windings; one missing phase opens the motor.
-  const running = MOTOR_WINDINGS.every((winding) => windingEnergized(winding, network, star));
-  return Object.fromEntries(MOTOR_IDS.map((id) => [id, running]));
+  const running = energized.every(Boolean);
+  return {
+    motors: Object.fromEntries(MOTOR_IDS.map((id) => [id, running])),
+    windings: Object.fromEntries(
+      MOTOR_WINDINGS.map((winding, index) => [winding.from, energized[index]]),
+    ),
+  };
 }
 
 function stopped(
@@ -315,6 +326,7 @@ function stopped(
     coils,
     lamps: allFalse(LAMP_IDS),
     motors: allFalse(MOTOR_IDS),
+    windings: Object.fromEntries(MOTOR_WINDINGS.map((winding) => [winding.from, false])),
     closedContacts: getClosedContacts(coils, inputs).map((contact) => contact.id),
     potential: Object.fromEntries(
       TERMINAL_IDS.map((terminal) => [terminal, 'floating' as Potential]),
@@ -392,10 +404,12 @@ export function simulate(
           network.railOf.get(network.component.get(terminal)!) ?? 'floating',
         ]),
       );
+      const motor = motorStates(network);
       return {
         coils: next,
         lamps,
-        motors: motorStates(network),
+        motors: motor.motors,
+        windings: motor.windings,
         closedContacts: contacts.map((contact) => contact.id),
         potential,
         fault: null,

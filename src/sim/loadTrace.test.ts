@@ -203,3 +203,58 @@ describe('stable load connectivity explanations', () => {
     expect(trace.wireIds).toEqual(wires.map((wire) => wire.id).sort());
   });
 });
+
+describe('motor observation', () => {
+  const motorExample = () => example('motor-self-hold');
+
+  it('explains a running motor through all three windings at once', () => {
+    const wires = motorExample();
+    const running = simulate(wires, { SB2: true }, true);
+    expect(running.motors.MOTOR).toBe(true);
+    const trace = traceLoad(wires, running, true, 'MOTOR');
+    expect(trace.multiWinding).toBe(true);
+    expect(trace.status).toBe('energized');
+    expect(trace.ends.map((end) => end.terminalId)).toEqual([
+      'MOTOR:U1',
+      'MOTOR:U2',
+      'MOTOR:V1',
+      'MOTOR:V2',
+      'MOTOR:W1',
+      'MOTOR:W2',
+    ]);
+    // Each phase conductor and each winding terminal must be explained.
+    expect(trace.terminalIds).toEqual(
+      expect.arrayContaining([
+        'MOTOR:U1',
+        'MOTOR:V1',
+        'MOTOR:W1',
+        'MOTOR:U2',
+        'MOTOR:V2',
+        'MOTOR:W2',
+      ]),
+    );
+    expect(trace.contactIds).toEqual(
+      expect.arrayContaining(['KM1:L1-T1', 'KM1:L2-T2', 'KM1:L3-T3']),
+    );
+    expect(trace.wireIds.length).toBeGreaterThan(0);
+  });
+
+  it('reports a missing phase as partial instead of a running motor', () => {
+    const wires = motorExample().filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, { SB2: true }, true);
+    expect(state.motors.MOTOR).toBe(false);
+    const trace = traceLoad(wires, state, true, 'MOTOR');
+    expect(trace.status).toBe('partial');
+    // The live U and V windings are still explained, so the learner sees what works.
+    expect(trace.terminalIds).toEqual(expect.arrayContaining(['MOTOR:U1', 'MOTOR:V1']));
+  });
+
+  it('does not claim a trace for a stopped motor with no phase supply', () => {
+    const wires = motorExample();
+    const stopped = simulate(wires, {}, true);
+    expect(stopped.motors.MOTOR).toBe(false);
+    expect(traceLoad(wires, stopped, true, 'MOTOR').status).toBe('unconnected');
+  });
+});

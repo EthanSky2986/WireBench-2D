@@ -543,70 +543,88 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
 
       {kind === 'motor' && (
         <g>
-          <rect x="12" y="14" width="140" height="136" rx="7" fill="#283238" opacity="0.09" />
+          {/* Cast base with two mounting feet, as on the bench motor. */}
+          <rect x="12" y="118" width="136" height="10" rx="3" fill="#283238" opacity="0.12" />
           <rect
-            x="10"
-            y="9"
-            width="140"
-            height="136"
-            rx="6"
-            fill={fill('plate')}
-            stroke="#a5afb0"
-          />
-          <path d="M 18 10 H 142 M 11 18 V 138" stroke="#fff" opacity="0.85" />
-          <Screw x={21} y={21} radius={3} metal={fill('metal')} />
-          <Screw x={139} y={133} radius={3} metal={fill('metal')} />
-          <rect
-            x="29"
-            y="31"
-            width="102"
-            height="92"
-            rx="3"
+            x="16"
+            y="111"
+            width="20"
+            height="11"
+            rx="2"
             fill={fill('bevel')}
-            stroke="#758087"
+            stroke="#1b2226"
           />
-          <rect x="35" y="37" width="90" height="79" rx="2" fill="#817867" stroke="#3d413e" />
-          <path d="M 36 38 H 124" stroke="#b2a88f" opacity="0.65" />
-          {[49, 80, 111].map((x, i) => (
-            <g key={x}>
-              <text
-                x={x}
-                y="49"
-                textAnchor="middle"
-                fill="#eeeadb"
-                fontSize="7"
-                className="refined-device-id"
-              >
-                {['U1', 'V1', 'W1'][i]}
-              </text>
-              <circle cx={x} cy="63" r="9" fill="#c4a966" stroke="#776437" />
-              <Screw x={x} y={63} radius={4} metal={fill('metal')} />
-              <circle cx={x} cy="94" r="9" fill="#c4a966" stroke="#776437" />
-              <Screw x={x} y={94} radius={4} metal={fill('metal')} />
-              <text
-                x={x}
-                y="111"
-                textAnchor="middle"
-                fill="#eeeadb"
-                fontSize="7"
-                className="refined-device-id"
-              >
-                {['U2', 'V2', 'W2'][i]}
-              </text>
-            </g>
+          <rect
+            x="82"
+            y="111"
+            width="20"
+            height="11"
+            rx="2"
+            fill={fill('bevel')}
+            stroke="#1b2226"
+          />
+          {/* Finned stator housing. The shaft runs left to right, so the fan sits at the right end. */}
+          <rect
+            x="12"
+            y="48"
+            width="106"
+            height="68"
+            rx="10"
+            fill={fill('blue')}
+            stroke="#22415a"
+          />
+          {[24, 31, 38, 45, 52, 59, 66, 73, 80, 87, 94].map((x) => (
+            <path key={x} d={`M ${x} 51 V 113`} stroke="#1b3a51" strokeWidth="1.4" opacity="0.42" />
           ))}
-          <g transform="translate(80 127)">
-            <circle r="6.4" fill={fill('bevel')} stroke="#758087" strokeWidth="0.9" />
-            <g className={`motor-rotor${active ? ' is-running' : ''}`}>
-              <path
-                d="M 0 -4.6 V 4.6 M -4.6 0 H 4.6 M -3.25 -3.25 L 3.25 3.25 M 3.25 -3.25 L -3.25 3.25"
-                stroke="#eeeadb"
-                strokeWidth="1.1"
-                strokeLinecap="round"
-              />
-              <circle r="1.2" fill="#eeeadb" />
+          <path d="M 16 54 H 70" stroke="#b3c9d8" strokeWidth="1.8" opacity="0.45" />
+          <path d="M 16 110 H 100" stroke="#163042" strokeWidth="1.6" opacity="0.55" />
+          {/* Nameplate. Its ratings are deliberately not modelled, only its presence. */}
+          <rect x="22" y="60" width="27" height="42" rx="1.5" fill="#e9ece4" stroke="#8d9a8d" />
+          <path d="M 25 65 H 44" stroke="#3f4a3f" strokeWidth="1.8" />
+          {[71, 76.5, 82, 87.5, 93, 98].map((y) => (
+            <path key={y} d={`M 25 ${y} H 45`} stroke="#7f8b7f" strokeWidth="0.9" opacity="0.8" />
+          ))}
+          {/* Terminal box bolted onto the top face, with its own lid screws. */}
+          <rect x="54" y="24" width="46" height="28" rx="3" fill="#1d2225" stroke="#0b0f11" />
+          <rect x="57" y="27" width="40" height="17" rx="2" fill="#2f373c" />
+          <path d="M 58 28.5 H 96" stroke="#68747b" strokeWidth="1" opacity="0.65" />
+          <circle cx="95" cy="46.5" r="2" fill="#b9963f" />
+          <circle cx="59" cy="46.5" r="2" fill="#b9963f" />
+          {/* Short shaft linking the housing to the fan cowl. */}
+          <rect x="98" y="76" width="16" height="9" rx="2" fill={fill('metal')} stroke="#5d6a72" />
+          {/* Fan cowl: a ring of cooling slots around the rotating blade set. */}
+          <circle cx="130" cy="81" r="27" fill={fill('bevel')} stroke="#22415a" strokeWidth="1.6" />
+          <circle cx="130" cy="81" r="21" fill="#141f26" />
+          {/* The translate stays on the outer group: a CSS rotation animation replaces
+              the transform attribute, and the blades would otherwise jump to the origin. */}
+          <g transform="translate(130 81)">
+            <g className={`motor-fan${active ? ' is-running' : ''}`}>
+              {[0, 120, 240].map((angle) => (
+                <path
+                  key={angle}
+                  d="M 0 -3.4 C 8 -14 17 -11 16.2 -3.2 C 15.4 4.4 7 7.4 0 -3.4 Z"
+                  fill="#a9bcc7"
+                  opacity="0.9"
+                  transform={`rotate(${angle})`}
+                />
+              ))}
+              <circle r="5" fill="#39464e" stroke="#8d9aa3" strokeWidth="1.2" />
+              <circle r="1.4" fill="#cfd8dd" />
             </g>
           </g>
+          <circle cx="130" cy="81" r="27" fill="none" stroke="#5f6d76" strokeWidth="1.8" />
+          {[0, 60, 120, 180, 240, 300].map((angle) => (
+            <path
+              key={angle}
+              d="M 130 55.4 V 60.2"
+              stroke="#7c8992"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              transform={`rotate(${angle} 130 81)`}
+            />
+          ))}
+          {/* Running indicator beside the cowl. */}
+          <circle cx="139" cy="70" r="1.7" fill="#57d6a0" className="motor-indicator" />
           <text
             x="80"
             y="142"

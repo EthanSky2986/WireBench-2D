@@ -65,6 +65,15 @@ interface WireVisualProps {
   traced?: boolean;
 }
 
+/** Live-rail colours reused by terminal dots and wire shading; see tokens.css. */
+const RAIL_COLORS: Record<string, string | undefined> = {
+  L: 'var(--rail-live-l)',
+  N: 'var(--rail-live-n)',
+  U: 'var(--rail-live-u)',
+  V: 'var(--rail-live-v)',
+  W: 'var(--rail-live-w)',
+};
+
 function WireVisual({ points, color, selected, fault, live, traced }: WireVisualProps) {
   const route = polyline(points);
   const vectorEffect = selected ? 'non-scaling-stroke' : undefined;
@@ -735,7 +744,10 @@ export default function Bench(p: Props) {
             const points = w.points,
               selected = p.selectedWire === w.id,
               fault = highlighted.has(w.id),
-              live = p.powered && !p.result.fault && p.result.potential[w.from] === 'L';
+              live =
+                p.powered &&
+                !p.result.fault &&
+                RAIL_COLORS[p.result.potential[w.from]] !== undefined;
             return (
               <g
                 key={w.id}
@@ -859,7 +871,8 @@ export default function Bench(p: Props) {
           {SOCKETS.map((s) => {
             const potential = p.result.potential[s.id],
               connected = counts[s.id] > 0,
-              selected = p.pending === s.id || hover === s.id;
+              selected = p.pending === s.id || hover === s.id,
+              liveRail = p.powered && !p.result.fault ? RAIL_COLORS[potential] : undefined;
             return (
               <g
                 key={s.id}
@@ -920,21 +933,15 @@ export default function Bench(p: Props) {
                   cy={s.y}
                   r="6.2"
                   fill={selected ? '#d5f1e5' : '#697e70'}
-                  stroke={selected ? '#127659' : '#a7b5ab'}
-                  strokeWidth={selected ? 2.5 : 1}
+                  stroke={selected ? '#127659' : liveRail ? liveRail : '#a7b5ab'}
+                  strokeWidth={selected ? 2.5 : liveRail ? 2 : 1}
                 />
                 <circle
                   cx={s.x}
                   cy={s.y}
                   r="3.7"
                   fill={
-                    selected
-                      ? '#16785c'
-                      : p.powered && potential === 'L'
-                        ? '#dea947'
-                        : connected
-                          ? '#cedccc'
-                          : '#233c31'
+                    selected ? '#16785c' : liveRail ? liveRail : connected ? '#cedccc' : '#233c31'
                   }
                 />
                 {connected && <circle cx={s.x} cy={s.y} r="1.5" fill="#e6ede2" />}

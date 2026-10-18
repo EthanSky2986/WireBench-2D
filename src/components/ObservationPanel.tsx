@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { ChevronLeft, ChevronRight, ScanLine } from 'lucide-react';
 import { useI18n, type Translate } from '../i18n';
 import { localizeFault } from '../i18n/messages';
-import { DEVICE_MAP, LOADS, type Wire } from '../sim/model';
+import { DEVICE_MAP, OBSERVABLE_LOADS, type Wire } from '../sim/model';
 import type { LoadTrace } from '../sim/loadTrace';
 import {
   diffSimulationStates,
@@ -208,9 +208,16 @@ export default function ObservationPanel({
           value={trace.loadId}
           onChange={(event) => onLoadChange(event.target.value)}
         >
-          {LOADS.map((load) => (
+          {OBSERVABLE_LOADS.map((load) => (
             <option key={load.deviceId} value={load.deviceId}>
-              {load.deviceId} · {t(load.kind === 'coil' ? 'learning.coil' : 'learning.lamp')}
+              {load.deviceId} ·{' '}
+              {t(
+                load.kind === 'coil'
+                  ? 'learning.coil'
+                  : load.kind === 'winding'
+                    ? 'learning.motor'
+                    : 'learning.lamp',
+              )}
             </option>
           ))}
         </select>
@@ -235,7 +242,7 @@ export default function ObservationPanel({
             ))}
           </div>
         )}
-        {trace.status === 'energized' ? (
+        {trace.status === 'energized' || trace.status === 'partial' ? (
           <>
             <p>
               {t('learning.traceCount', {
@@ -260,7 +267,7 @@ export default function ObservationPanel({
         )}
         {displayed.result.fault && <p>{localizeFault(displayed.result.fault, locale)}</p>}
       </div>
-      {trace.status === 'energized' && (
+      {(trace.status === 'energized' || trace.status === 'partial') && (
         <div className="observation-path">
           <h3>{t('learning.pathContacts')}</h3>
           {trace.contactIds.length ? (
