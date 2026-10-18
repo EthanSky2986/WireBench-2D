@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { encodeProject, makeProject, parseProject } from './project';
 import { PROJECT_LIMITS } from './limits';
+import { EXAMPLES } from './sim/examples';
 import { TERMINAL_IDS } from './sim/model';
 import type { Wire } from './sim/model';
 
@@ -157,5 +158,15 @@ describe('接线文件', () => {
         /有限数值/,
       );
     }
+  });
+});
+
+describe('三相电机示例的存档', () => {
+  it('三相导线与 Y 接法星点导线完整往返，颜色按相保留', () => {
+    const example = EXAMPLES.find((item) => item.id === 'motor-self-hold')!;
+    const back = parseProject(encodeProject(example.name, example.wires));
+    expect(back.wires).toEqual(example.wires);
+    // Three distinct phase colours plus the control colours must survive.
+    expect(new Set(back.wires.map((wire) => wire.color)).size).toBeGreaterThan(2);
   });
 });
