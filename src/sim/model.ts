@@ -80,6 +80,30 @@ export const DEVICES: Device[] = [
 export const DEVICE_MAP: Record<string, Device> = Object.fromEntries(
   DEVICES.map((device) => [device.id, device]),
 );
+
+/**
+ * Five independent supply rails. L/N are the single-phase teaching control
+ * supply; U/V/W are the three-phase main supply (380 V line-to-line). A rail is
+ * identified by the exposed terminal that feeds it, so terminals never share a
+ * label and two rails can only be joined by an actual wire or closed contact.
+ */
+export const SUPPLY_RAILS = {
+  L: 'POWER:L',
+  N: 'POWER:N',
+  U: 'POWER:U2',
+  V: 'POWER:V2',
+  W: 'POWER:W2',
+} as const;
+
+export type Rail = keyof typeof SUPPLY_RAILS;
+export const RAIL_IDS = Object.keys(SUPPLY_RAILS) as Rail[];
+
+export const PHASES = ['U', 'V', 'W'] as const;
+export type Phase = (typeof PHASES)[number];
+
+export function isPhase(rail: Rail): rail is Phase {
+  return rail === 'U' || rail === 'V' || rail === 'W';
+}
 export const TERMINAL_IDS: string[] = DEVICES.flatMap((device) =>
   device.terminals.map((label) => `${device.id}:${label}`),
 );
@@ -156,9 +180,7 @@ export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
   return [];
 });
 
+/** Motor terminals stay reserved in Phase 1; the three-phase supply itself is simulated. */
 export const UNSUPPORTED_TERMINALS = new Set([
-  'POWER:U2',
-  'POWER:V2',
-  'POWER:W2',
   ...DEVICE_MAP.MOTOR.terminals.map((label) => `MOTOR:${label}`),
 ]);

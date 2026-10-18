@@ -379,8 +379,8 @@ describe('fault detection and useful localization', () => {
     expect(simulate(connect(['POWER:L', 'POWER:N']), {}, false).fault).toBeNull();
   });
 
-  it('rejects motor and three-phase reserved terminals explicitly', () => {
-    for (const terminal of ['POWER:U2', 'POWER:V2', 'POWER:W2', 'MOTOR:U1', 'MOTOR:U2']) {
+  it('rejects the motor reserved terminals explicitly', () => {
+    for (const terminal of ['MOTOR:U1', 'MOTOR:U2', 'MOTOR:W2']) {
       const state = simulate(connect([terminal, 'KM1:L1']), {}, true);
       expect(state.fault?.kind).toBe('unsupported');
       expect(state.fault?.terminals).toContain(terminal);
@@ -402,5 +402,75 @@ describe('fault detection and useful localization', () => {
     const state = simulate(connect(['KM1:62', 'KM1:A1'], ['KM1:A2', 'POWER:N']), {}, true);
     expect(state.fault).toBeNull();
     expect(state.coils.KM1).toBe(false);
+  });
+});
+
+describe('three-phase main supply', () => {
+  it('accepts the three phase terminals instead of reporting a reserved area', () => {
+    for (const terminal of ['POWER:U2', 'POWER:V2', 'POWER:W2']) {
+      const state = simulate(connect([terminal, 'KM1:L1']), {}, true);
+      expect(state.fault).toBeNull();
+      expect(state.potential['KM1:L1']).toBe(terminal.slice(-2, -1));
+    }
+  });
+
+  it('keeps the three phase rails independent of each other', () => {
+    const state = simulate(
+      connect(['POWER:U2', 'KM1:L1'], ['POWER:V2', 'KM1:L2'], ['POWER:W2', 'KM1:L3']),
+      {},
+      true,
+    );
+    expect(state.fault).toBeNull();
+    expect(state.potential['KM1:L1']).toBe('U');
+    expect(state.potential['KM1:L2']).toBe('V');
+    expect(state.potential['KM1:L3']).toBe('W');
+    expect(state.potential['KM1:T1']).toBe('floating');
+  });
+
+  it.each([
+    ['U', 'V'],
+    ['V', 'W'],
+    ['U', 'W'],
+  ])('detects a %s-%s phase-to-phase short and locates the wire', (a, b) => {
+    const terminals = { U: 'POWER:U2', V: 'POWER:V2', W: 'POWER:W2' } as const;
+    const state = simulate(
+      connect([terminals[a as 'U'], 'KM1:L1'], [terminals[b as 'U'], 'KM1:L1']),
+      {},
+      true,
+    );
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.wireIds).toEqual(['w1', 'w2']);
+    expect(state.fault?.terminals).toEqual(expect.arrayContaining([terminals[a as 'U'], 'KM1:L1']));
+    expect(state.fault?.descriptor.code).toBe('message.fault.phase-short');
+    expect(state.coils.KM1).toBe(false);
+    expect(Object.values(state.lamps).some(Boolean)).toBe(false);
+  });
+
+  it('detects a phase-to-neutral short through a closed contact path', () => {
+    const state = simulate(
+      connect(
+        ['POWER:U2', 'KM1:L1'],
+        ['KM1:T1', 'POWER:N'],
+        ['POWER:V2', 'SB3:NO3'],
+        ['SB3:NO4', 'POWER:N'],
+      ),
+      { SB3: true },
+      true,
+    );
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.descriptor.code).toBe('message.fault.phase-neutral');
+  });
+
+  it('does not report a phase short merely because both terminals exist', () => {
+    const state = simulate(connect(['POWER:U2', 'KM1:L1'], ['POWER:V2', 'KM1:L2']), {}, true);
+    expect(state.fault).toBeNull();
+  });
+
+  it('keeps the original L-N short report, including its terminals and wire', () => {
+    const state = simulate(connect(['POWER:L', 'POWER:N'], ['POWER:U2', 'KM1:L1']), {}, true);
+    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.descriptor.code).toBe('message.fault.short');
+    expect(state.fault?.wireIds).toEqual(['w1']);
+    expect(state.fault?.terminals).toEqual(['POWER:L', 'POWER:N']);
   });
 });

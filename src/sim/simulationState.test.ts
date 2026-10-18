@@ -80,7 +80,7 @@ describe('event-driven simulation state', () => {
         ['KM1:62', 'KM1:A1'],
         ['KM1:A2', 'POWER:N'],
       ]),
-      wires([['POWER:U2', 'KM1:L1']]),
+      wires([['MOTOR:U1', 'KM1:L1']]),
     ];
     for (const circuit of cases) {
       const faulted = run(createSimulationState(circuit), powerOn);

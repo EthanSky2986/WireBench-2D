@@ -3,6 +3,12 @@ import type { zh } from './messages.zh';
 export const en = {
   'message.fault.short':
     'Control supply L and N are directly connected through wires or closed contacts, causing a short circuit. Switch off the power and inspect the highlighted wires.',
+  'message.fault.phase-short':
+    'Phases {phases} of the three-phase supply are directly connected through wires or closed contacts, causing a phase-to-phase short circuit. Switch off the power and inspect the highlighted wires.',
+  'message.fault.phase-neutral':
+    'Phase {phase} of the three-phase supply is directly connected to N through wires or closed contacts, causing a phase-to-neutral short circuit. Switch off the power and inspect the highlighted wires.',
+  'message.fault.supply-mix':
+    'Control supply L and three-phase phase {phase} are joined at one node. The two teaching supplies do not share a common reference and must not be mixed like this. Wire them separately.',
   'message.fault.series':
     '{devices} form a series-load or voltage-divider circuit. This version supports loads connected independently across the control supply. Use parallel branches instead.',
   'message.fault.unknown-terminal':

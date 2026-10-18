@@ -1,5 +1,5 @@
 import type { Potential, SimulationResult } from './engine';
-import { CONTACTS, LOADS, TERMINAL_IDS, type Wire } from './model';
+import { CONTACTS, LOADS, SUPPLY_RAILS, TERMINAL_IDS, type Rail, type Wire } from './model';
 
 export interface LoadTrace {
   /** The selected load's device ID, as defined by LOADS. */
@@ -25,6 +25,10 @@ interface ConductorBlocks {
 }
 
 const TERMINAL_INDEX = new Map(TERMINAL_IDS.map((id, index) => [id, index]));
+
+function isRail(potential: Potential): potential is Rail {
+  return potential !== 'floating';
+}
 
 /**
  * Split the undirected conductor graph into biconnected edge blocks. In the
@@ -103,9 +107,9 @@ function conductorBlocks(wires: Wire[], result: SimulationResult): ConductorBloc
   return { edges, blocks, tree };
 }
 
-function supportEdges(network: ConductorBlocks, from: string, rail: 'L' | 'N'): number[] | null {
+function supportEdges(network: ConductorBlocks, from: string, rail: Rail): number[] | null {
   const start = TERMINAL_INDEX.get(from)!;
-  const target = TERMINAL_INDEX.get(`POWER:${rail}`)!;
+  const target = TERMINAL_INDEX.get(SUPPLY_RAILS[rail])!;
   const previous = new Map<number, number>([[start, -1]]);
   const queue = [start];
   for (let head = 0; head < queue.length && !previous.has(target); head++) {
@@ -158,11 +162,12 @@ export function traceLoad(
   if (!powered) return { ...empty, status: 'unpowered' };
   if (!load) return empty;
   const [from, to] = ends;
-  if (from.potential !== 'floating' && from.potential === to.potential) {
+  if (!isRail(from.potential) || !isRail(to.potential)) return empty;
+  if (from.potential === to.potential) {
     return { ...empty, status: 'same-rail' };
   }
   const active = load.kind === 'coil' ? result.coils[loadId] : result.lamps[loadId];
-  if (!active || from.potential === 'floating' || to.potential === 'floating') return empty;
+  if (!active) return empty;
 
   const network = conductorBlocks(wires, result);
   const fromEdges = supportEdges(network, load.from, from.potential);

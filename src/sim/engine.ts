@@ -1,8 +1,18 @@
-import { CONTACTS, DEVICE_MAP, DEVICES, LOADS, TERMINAL_IDS, UNSUPPORTED_TERMINALS } from './model';
-import type { Contact, Load, Wire } from './model';
+import {
+  CONTACTS,
+  DEVICE_MAP,
+  DEVICES,
+  LOADS,
+  RAIL_IDS,
+  SUPPLY_RAILS,
+  TERMINAL_IDS,
+  UNSUPPORTED_TERMINALS,
+} from './model';
+import type { Contact, Load, Rail, Wire } from './model';
 import { messageDetails, type MessageDescriptor } from '../i18n/messages';
 
-export type Potential = 'L' | 'N' | 'floating';
+/** A terminal is either tied to one supply rail or unconnected; it is not a measured voltage. */
+export type Potential = Rail | 'floating';
 export interface SimulationFault {
   kind: 'short' | 'unsupported' | 'unstable';
   message: string;
@@ -23,8 +33,6 @@ export interface SimulationResult {
 const COIL_IDS = DEVICES.filter((device) => device.kind === 'contactor').map((device) => device.id);
 const LAMP_IDS = DEVICES.filter((device) => device.kind === 'lamp').map((device) => device.id);
 const VALID_TERMINALS = new Set(TERMINAL_IDS);
-const L = 'POWER:L';
-const N = 'POWER:N';
 
 interface Edge {
   to: string;
@@ -34,8 +42,10 @@ interface Network {
   graph: Map<string, Edge[]>;
   component: Map<string, number>;
   members: Map<number, string[]>;
-  lComponent: number;
-  nComponent: number;
+  /** Component index of every supply rail. */
+  rails: Record<Rail, number>;
+  /** Reverse lookup; the first rail in RAIL_IDS order owns a merged component. */
+  railOf: Map<number, Rail>;
 }
 
 const allFalse = (ids: string[]): Record<string, boolean> =>
@@ -81,22 +91,29 @@ function buildNetwork(wires: Wire[], contacts: Contact[]): Network {
     }
     members.set(id, queue);
   }
-  return {
-    graph,
-    component,
-    members,
-    lComponent: component.get(L)!,
-    nComponent: component.get(N)!,
-  };
+  const rails = Object.fromEntries(
+    RAIL_IDS.map((rail) => [rail, component.get(SUPPLY_RAILS[rail])!]),
+  ) as Record<Rail, number>;
+  const railOf = new Map<number, Rail>();
+  for (const rail of RAIL_IDS) {
+    // A user wire may join two rails. The first rail keeps the identity and the
+    // pair is reported as a short, so a merged component is never taken for a
+    // legitimate supply of the later rail.
+    if (!railOf.has(rails[rail])) railOf.set(rails[rail], rail);
+  }
+  return { graph, component, members, rails, railOf };
 }
 
-/** A shortest conductor-only path makes short-circuit feedback actionable. */
-function shortCircuit(network: Network): SimulationFault | null {
-  if (network.lComponent !== network.nComponent) return null;
-  const queue = [L];
+/** A shortest conductor-only path keeps short-circuit feedback actionable. */
+function conductorPath(
+  network: Network,
+  from: string,
+  to: string,
+): { terminals: string[]; wireIds: string[] } | null {
+  const queue = [from];
   const previous = new Map<string, { terminal: string; wireId?: string }>();
-  const visited = new Set([L]);
-  for (let head = 0; head < queue.length && !visited.has(N); head++) {
+  const visited = new Set([from]);
+  for (let head = 0; head < queue.length && !visited.has(to); head++) {
     for (const edge of network.graph.get(queue[head])!) {
       if (visited.has(edge.to)) continue;
       previous.set(edge.to, { terminal: queue[head], wireId: edge.wireId });
@@ -104,26 +121,82 @@ function shortCircuit(network: Network): SimulationFault | null {
       queue.push(edge.to);
     }
   }
-  const terminals = [N];
+  if (!visited.has(to)) return null;
+  const terminals = [to];
   const wireIds: string[] = [];
-  for (let cursor = N; cursor !== L;) {
+  for (let cursor = to; cursor !== from;) {
     const edge = previous.get(cursor)!;
     if (edge.wireId) wireIds.push(edge.wireId);
     terminals.push(edge.terminal);
     cursor = edge.terminal;
   }
-  return {
-    kind: 'short',
-    ...messageDetails({ code: 'message.fault.short' }),
-    terminals: terminals.reverse(),
-    wireIds: [...new Set(wireIds.reverse())],
-  };
+  return { terminals: terminals.reverse(), wireIds: [...new Set(wireIds.reverse())] };
+}
+
+interface ShortPair {
+  from: Rail;
+  to: Rail;
+  descriptor: MessageDescriptor;
+}
+
+/**
+ * Rails that must never be tied together by ideal conductors. L–N keeps its
+ * original single-phase report; the three-phase main supply adds phase-to-phase
+ * and phase-to-neutral checks, and mixing the two supplies is reported instead
+ * of silently treating the mixed rails as one legitimate source.
+ */
+const SHORT_PAIRS: ShortPair[] = [
+  { from: 'L', to: 'N', descriptor: { code: 'message.fault.short' } },
+  {
+    from: 'U',
+    to: 'V',
+    descriptor: { code: 'message.fault.phase-short', params: { phases: ['U', 'V'] } },
+  },
+  {
+    from: 'V',
+    to: 'W',
+    descriptor: { code: 'message.fault.phase-short', params: { phases: ['V', 'W'] } },
+  },
+  {
+    from: 'U',
+    to: 'W',
+    descriptor: { code: 'message.fault.phase-short', params: { phases: ['U', 'W'] } },
+  },
+  {
+    from: 'U',
+    to: 'N',
+    descriptor: { code: 'message.fault.phase-neutral', params: { phase: 'U' } },
+  },
+  {
+    from: 'V',
+    to: 'N',
+    descriptor: { code: 'message.fault.phase-neutral', params: { phase: 'V' } },
+  },
+  {
+    from: 'W',
+    to: 'N',
+    descriptor: { code: 'message.fault.phase-neutral', params: { phase: 'W' } },
+  },
+  { from: 'L', to: 'U', descriptor: { code: 'message.fault.supply-mix', params: { phase: 'U' } } },
+  { from: 'L', to: 'V', descriptor: { code: 'message.fault.supply-mix', params: { phase: 'V' } } },
+  { from: 'L', to: 'W', descriptor: { code: 'message.fault.supply-mix', params: { phase: 'W' } } },
+];
+
+function shortCircuit(network: Network): SimulationFault | null {
+  for (const pair of SHORT_PAIRS) {
+    if (network.rails[pair.from] !== network.rails[pair.to]) continue;
+    const path = conductorPath(network, SUPPLY_RAILS[pair.from], SUPPLY_RAILS[pair.to]);
+    if (!path) continue;
+    return { kind: 'short', ...messageDetails(pair.descriptor), ...path };
+  }
+  return null;
 }
 
 /**
  * Contract only ideal conductors. A cluster of unreferenced nodes linked by
- * loads is unsupported only if loads connect that cluster to BOTH rails.
- * This admits independent parallel loads and disconnected/dangling circuits.
+ * loads is unsupported only if loads connect that cluster to BOTH control
+ * rails. This admits independent parallel loads and disconnected/dangling
+ * circuits. Motor windings are loads here too: they never become conductors.
  */
 function unsupportedLoadNetwork(network: Network, wires: Wire[]): SimulationFault | null {
   const loadGraph = new Map<number, { to: number; load: Load }[]>();
@@ -136,7 +209,7 @@ function unsupportedLoadNetwork(network: Network, wires: Wire[]): SimulationFaul
     loadGraph.get(from)!.push({ to, load });
     loadGraph.get(to)!.push({ to: from, load });
   }
-  const isRail = (id: number) => id === network.lComponent || id === network.nComponent;
+  const isRail = (id: number) => id === network.rails.L || id === network.rails.N;
   const visited = new Set<number>();
   for (const start of loadGraph.keys()) {
     if (isRail(start) || visited.has(start)) continue;
@@ -177,8 +250,8 @@ function poweredLoad(load: Load, network: Network): boolean {
   const from = network.component.get(load.from)!;
   const to = network.component.get(load.to)!;
   return (
-    (from === network.lComponent && to === network.nComponent) ||
-    (from === network.nComponent && to === network.lComponent)
+    (from === network.rails.L && to === network.rails.N) ||
+    (from === network.rails.N && to === network.rails.L)
   );
 }
 
@@ -275,21 +348,14 @@ export function simulate(
     const lamps = allFalse(LAMP_IDS);
     for (const load of LOADS) {
       if (load.kind === 'coil') next[load.deviceId] = poweredLoad(load, network);
-      else lamps[load.deviceId] = poweredLoad(load, network);
+      else if (load.kind === 'lamp') lamps[load.deviceId] = poweredLoad(load, network);
     }
     if (COIL_IDS.every((id) => next[id] === coils[id])) {
       const potential = Object.fromEntries(
-        TERMINAL_IDS.map((terminal): [string, Potential] => {
-          const component = network.component.get(terminal);
-          return [
-            terminal,
-            component === network.lComponent
-              ? 'L'
-              : component === network.nComponent
-                ? 'N'
-                : 'floating',
-          ];
-        }),
+        TERMINAL_IDS.map((terminal): [string, Potential] => [
+          terminal,
+          network.railOf.get(network.component.get(terminal)!) ?? 'floating',
+        ]),
       );
       return {
         coils: next,
