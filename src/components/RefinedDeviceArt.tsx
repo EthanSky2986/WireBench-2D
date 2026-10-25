@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import type { DeviceArtProps } from './DeviceArt';
+import { DEVICE_MAP } from '../sim/model';
 import { useI18n } from '../i18n';
 import './refined-device-art.css';
 
@@ -290,9 +291,6 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           <text x="63" y="86" textAnchor="middle" fill="#7c8890" fontSize="4" letterSpacing="0.1">
             LANN22
           </text>
-          <text x="63" y="94" textAnchor="middle" fill="#6f7c84" fontSize="4" letterSpacing="0.1">
-            Ui 690V AC-3
-          </text>
 
           {/* Coil energization window: the amber flag drops when the coil pulls in. */}
           <path d="M 74 72 H 88 V 97 H 74 Z" fill="#101b21" stroke="#768189" strokeWidth="0.7" />
@@ -387,9 +385,6 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           </text>
           <text x="127" y="62" textAnchor="end" fill="#bdc7cb" fontSize="4.6">
             THERMAL RELAY
-          </text>
-          <text x="127" y="69" textAnchor="end" fill="#8b979d" fontSize="4.2">
-            Ui 690V · 10A
           </text>
           {/* Trip indicator: dark at rest, red when the relay has tripped. */}
           <circle
@@ -645,7 +640,9 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
             <path key={x} d={`M ${x} 51 V 113`} stroke="#1b3a51" strokeWidth="1.4" opacity="0.42" />
           ))}
           <path d="M 16 54 H 70" stroke="#b3c9d8" strokeWidth="1.8" opacity="0.45" />
-          <path d="M 16 110 H 100" stroke="#163042" strokeWidth="1.6" opacity="0.55" />
+          <path d="M 16 110 H 112" stroke="#163042" strokeWidth="1.6" opacity="0.55" />
+          <path d="M 18 57 H 112" stroke="#88a5b7" strokeWidth="0.8" opacity="0.28" />
+          <path d="M 103 58 V 106" stroke="#1d4056" strokeWidth="1.1" opacity="0.48" />
           {/* Nameplate. Its ratings are deliberately not modelled, only its presence. */}
           <rect x="22" y="60" width="27" height="42" rx="1.5" fill="#e9ece4" stroke="#8d9a8d" />
           <path d="M 22 64 H 49" stroke="#3f4a3f" strokeWidth="2" />
@@ -656,22 +653,31 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
             opacity="0.8"
           />
           <path d="M 34 66 V 96" stroke="#c3cbc2" strokeWidth="0.5" opacity="0.7" />
-          {/* Terminal box bolted onto the top face. The lid is raised with two
-              corner screws, and the winding studs show through the aperture. */}
+          {/* Terminal box bolted onto the top face. Its six studs mirror the
+              motor terminal strip: U1/V1/W1 above U2/V2/W2. */}
           <rect x="54" y="24" width="46" height="28" rx="3" fill="#1d2225" stroke="#0b0f11" />
           <rect x="57" y="27" width="40" height="22" rx="2" fill="#2f373c" />
           <path d="M 58 28.5 H 96" stroke="#68747b" strokeWidth="1" opacity="0.65" />
-          {[61.5, 69.5, 77.5, 85.5].map((x) => (
-            <circle
-              key={x}
-              cx={x}
-              cy="38"
-              r="1.9"
-              fill="#1a2226"
-              stroke="#6d7a81"
-              strokeWidth="0.6"
-            />
-          ))}
+          {DEVICE_MAP.MOTOR.terminals.map((label, index) => {
+            const x = 63 + (index % 3) * 13;
+            const y = 35 + Math.floor(index / 3) * 9;
+            return (
+              <g key={label}>
+                <circle cx={x} cy={y} r="2.15" fill="#161f23" stroke="#8b989d" strokeWidth="0.6" />
+                <circle cx={x} cy={y} r="0.8" fill="#c1c9cc" opacity="0.9" />
+                <text
+                  x={x}
+                  y={Number(y) + 5.4}
+                  textAnchor="middle"
+                  fill="#cbd3d5"
+                  fontSize="3.2"
+                  fontFamily="SFMono-Regular, Consolas, monospace"
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
           <circle cx="95" cy="46.5" r="2" fill="#b9963f" />
           <circle cx="59" cy="46.5" r="2" fill="#b9963f" />
           {/* Cable gland where the motor leads leave the box. */}
@@ -687,13 +693,23 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           />
           <path d="M 75 53 H 80" stroke="#7d8a91" strokeWidth="0.8" />
           {/* Short shaft linking the housing to the fan cowl. */}
-          <rect x="98" y="76" width="16" height="9" rx="2" fill={fill('metal')} stroke="#5d6a72" />
+          <rect x="98" y="76" width="18" height="9" rx="2" fill={fill('metal')} stroke="#5d6a72" />
+          <path d="M 101 77.5 H 113" stroke="#ffffff" strokeWidth="0.7" opacity="0.55" />
           {/* Fan cowl: a ring of cooling slots around the rotating blade set. */}
-          <circle cx="130" cy="81" r="27" fill={fill('bevel')} stroke="#22415a" strokeWidth="1.6" />
-          <circle cx="130" cy="81" r="21" fill="#141f26" />
+          <circle cx="128" cy="81" r="24" fill={fill('bevel')} stroke="#203f55" strokeWidth="1.6" />
+          <circle cx="128" cy="81" r="20" fill="#111c23" stroke="#71818a" strokeWidth="0.8" />
+          <circle cx="128" cy="81" r="17" fill="#0c151a" stroke="#263840" strokeWidth="0.7" />
+          <circle
+            cx="128"
+            cy="81"
+            r="22"
+            fill="#57d6a0"
+            opacity="0"
+            className="motor-running-halo"
+          />
           {/* The translate stays on the outer group: a CSS rotation animation replaces
               the transform attribute, and the blades would otherwise jump to the origin. */}
-          <g transform="translate(130 81)">
+          <g transform="translate(128 81)">
             <g className={`motor-fan${active ? ' is-running' : ''}`}>
               {[0, 120, 240].map((angle) => (
                 <path
@@ -708,24 +724,34 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
               <circle r="1.4" fill="#cfd8dd" />
             </g>
           </g>
-          <circle cx="130" cy="81" r="27" fill="none" stroke="#5f6d76" strokeWidth="1.8" />
+          <circle cx="128" cy="81" r="24" fill="none" stroke="#667680" strokeWidth="1.8" />
           {[0, 60, 120, 180, 240, 300].map((angle) => (
             <path
               key={angle}
-              d="M 130 55.4 V 60.2"
+              d="M 128 58.4 V 62.8"
               stroke="#7c8992"
               strokeWidth="1.5"
               strokeLinecap="round"
-              transform={`rotate(${angle} 130 81)`}
+              transform={`rotate(${angle} 128 81)`}
             />
           ))}
           {/* Running indicator beside the cowl. */}
-          <circle cx="139" cy="70" r="1.7" fill="#57d6a0" className="motor-indicator" />
+          <circle cx="143" cy="69" r="1.7" fill="#57d6a0" className="motor-indicator" />
+          <circle
+            cx="143"
+            cy="69"
+            r="3.1"
+            fill="none"
+            stroke="#57d6a0"
+            strokeWidth="0.55"
+            opacity="0.25"
+            className="motor-indicator-ring"
+          />
           <text
             x="80"
             y="142"
             textAnchor="middle"
-            fill="#333f46"
+            className="refined-motor-label"
             fontSize={locale === 'en' ? 7 : 8}
             fontWeight="600"
           >

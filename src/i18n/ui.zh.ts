@@ -45,7 +45,7 @@ export const zh = {
   'ui.example.motor-self-hold.name': '接触器自锁 + 电机',
   'ui.example.motor-self-hold.subtitle': '三相主回路 · Y 接法',
   'ui.example.motor-self-hold.description':
-    'SB2 启动，KM1 自锁，三相主回路经 KM1 主触点给电机供电，电机运转；SB1 断开控制回路后 KM1 释放，电机停止。U2/V2/W2 已短接成星点（Y 接法），可自行改接成 Δ。',
+    'SB2 启动，KM1 自锁，三相主回路经 KM1 主触点给电机供电，模型显示满足三相运转条件；SB1 断开控制回路后 KM1 释放，模型撤销运转状态。U2/V2/W2 已短接成星点（Y 接法），可自行改接成 Δ。',
   'ui.heading.tagline': '把电路接起来，让原理看得见。',
   'ui.heading.running': '运行观察',
   'ui.heading.editing': '自由接线',
@@ -156,7 +156,7 @@ export const zh = {
   'ui.guide.delete': '删除选中导线',
   'ui.guide.exitFullscreen': '退出实验台全屏',
   'ui.guide.boundaries':
-    '首版使用无数值的教学控制电源 L/N；三相、电机与串联负载分压暂不支持。灯和接触器不会因缺少真实接线而自动动作。',
+    '本版使用逻辑上的 L/N 控制母线和三条独立相线，提供理想触点切换及三绕组电机状态。仿真不表示实物电压、电流、转速或转向；灯、接触器和电机都必须按实际端子接线后才会动作。',
   'ui.guide.start': '开始实验',
   'ui.reset.label': '重置',
   'ui.reset.state': '复位运行状态',

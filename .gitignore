@@ -1,5 +1,9 @@
 node_modules/
 dist/
+artifacts/
+launcher/dist/
+launcher/bin/
+launcher/obj/
 .DS_Store
 *.log
 *.tsbuildinfo

@@ -33,3 +33,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+  windows-launcher:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+      - run: npm ci
+      - run: npm run package:windows
+      - name: Smoke test executable
+        shell: pwsh
+        run: ./scripts/smoke-test-windows-launcher.ps1

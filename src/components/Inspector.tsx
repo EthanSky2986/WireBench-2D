@@ -168,8 +168,12 @@ export default function Inspector({
         <>
           <div className={`device-preview ${active ? 'active' : ''}`}>
             <div className="preview-grid" />
-            <svg viewBox="0 0 180 175" role="img" aria-label={deviceName}>
-              <g transform="translate(10 6)">
+            <svg
+              viewBox={device.kind === 'motor' ? '0 12 160 140' : '0 0 180 175'}
+              role="img"
+              aria-label={deviceName}
+            >
+              <g transform={device.kind === 'motor' ? undefined : 'translate(10 6)'}>
                 <RefinedDeviceArt
                   kind={device.kind}
                   id={device.id}

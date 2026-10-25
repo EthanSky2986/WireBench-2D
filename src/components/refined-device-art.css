@@ -94,11 +94,27 @@
   transition: opacity var(--refined-transition);
 }
 
+.motor-indicator-ring,
+.motor-running-halo {
+  opacity: 0;
+  transition: opacity var(--refined-transition);
+}
+
 /* The material preview also renders the classic DeviceArt motor, so the
    running state is driven by the artwork root rather than one variant class. */
 :is(.refined-device-art, .device-art).is-active .motor-indicator,
 .device-preview.active .motor-indicator {
   opacity: 1;
+}
+
+:is(.refined-device-art, .device-art).is-active .motor-indicator-ring,
+.device-preview.active .motor-indicator-ring {
+  opacity: 0.75;
+}
+
+:is(.refined-device-art, .device-art).is-active .motor-running-halo,
+.device-preview.active .motor-running-halo {
+  opacity: 0.16;
 }
 
 @keyframes motor-fan-spin {
@@ -131,4 +147,9 @@
 
 .refined-device-art--contactor.is-active .refined-coil-window {
   opacity: 1;
+}
+
+.refined-device-art .refined-motor-label,
+.device-art .motor-art-label {
+  fill: var(--board-text-primary);
 }

@@ -6,9 +6,11 @@ export const en = {
   'message.fault.phase-short':
     'Phases {phases} of the three-phase supply are directly connected through wires or closed contacts, causing a phase-to-phase short circuit. Switch off the power and inspect the highlighted wires.',
   'message.fault.phase-neutral':
-    'Phase {phase} of the three-phase supply is directly connected to N through wires or closed contacts, causing a phase-to-neutral short circuit. Switch off the power and inspect the highlighted wires.',
+    'Phase {phase} of the three-phase supply is directly connected to control-supply N through wires or closed contacts. The model does not define whether the supplies share a neutral reference, so it stops on this supply-wiring fault. Check the actual supply arrangement and the highlighted wires.',
   'message.fault.supply-mix':
-    'Control supply L and three-phase phase {phase} are joined at one node. The two teaching supplies do not share a common reference and must not be mixed like this. Wire them separately.',
+    'Control supply L is directly connected to three-phase supply {phase}. The model does not define a common reference between these supplies, so it cannot determine the physical result of this connection and stops the simulation. Check the actual supply arrangement and wiring.',
+  'message.fault.unsupported-supply':
+    '{devices} are connected directly between supply rails {rails}. This model supports coils and lamps only across control supply L/N. Check the load wiring.',
   'message.fault.series':
     '{devices} form a series-load or voltage-divider circuit. This version supports loads connected independently across the control supply. Use parallel branches instead.',
   'message.fault.unknown-terminal':

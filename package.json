@@ -1,7 +1,7 @@
 {
   "name": "wirebench-2d",
   "private": true,
-  "version": "0.2.0-alpha",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -11,8 +11,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:identities": "node scripts/check-git-identities.mjs --history",
+    "check:release-version": "node scripts/check-release-version.mjs",
     "check": "npm run format:check && npm run build && npm test",
-    "prepare:public": "node scripts/create-public-candidate.mjs"
+    "prepare:public": "node scripts/create-public-candidate.mjs",
+    "package:windows": "npm run build && node scripts/build-windows-launcher.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

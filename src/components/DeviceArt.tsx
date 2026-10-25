@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { DEVICE_MAP } from '../sim/model';
 import { useI18n } from '../i18n';
 import './refined-device-art.css';
 
@@ -545,19 +546,50 @@ export function DeviceArt({ kind, id, active = false, tripped = false }: DeviceA
           ))}
           <path d="M 16 54 H 74" stroke="#a9c2d3" strokeWidth="1.8" opacity="0.5" />
           <path d="M 16 110 H 114" stroke="#263f52" strokeWidth="1.6" opacity="0.55" />
+          <path d="M 18 57 H 112" stroke="#88a5b7" strokeWidth="0.8" opacity="0.25" />
+          <path d="M 103 58 V 106" stroke="#1d4056" strokeWidth="1.1" opacity="0.46" />
           <rect x="22" y="60" width="27" height="42" rx="1.5" fill="#e9ece4" stroke="#8d9a8d" />
           <path d="M 25 65 H 44" stroke="#3f4a3f" strokeWidth="1.8" />
           {[71, 77, 83, 89, 95].map((y) => (
             <path key={y} d={`M 25 ${y} H 45`} stroke="#7f8b7f" strokeWidth="0.9" opacity="0.8" />
           ))}
           <rect x="54" y="24" width="46" height="28" rx="3" fill="#1d2225" stroke="#0b0f11" />
-          <rect x="57" y="27" width="40" height="17" rx="2" fill="#2f373c" />
+          <rect x="57" y="27" width="40" height="22" rx="2" fill="#2f373c" />
+          {DEVICE_MAP.MOTOR.terminals.map((label, index) => {
+            const x = 63 + (index % 3) * 13;
+            const y = 35 + Math.floor(index / 3) * 9;
+            return (
+              <g key={label}>
+                <circle cx={x} cy={y} r="2.15" fill="#161f23" stroke="#8b989d" strokeWidth="0.6" />
+                <circle cx={x} cy={y} r="0.8" fill="#c1c9cc" opacity="0.9" />
+                <text
+                  x={x}
+                  y={Number(y) + 5.4}
+                  textAnchor="middle"
+                  fill="#cbd3d5"
+                  fontSize="3.2"
+                  fontFamily={mono}
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
           <circle cx="95" cy="46.5" r="2" fill="#b9963f" />
           <circle cx="59" cy="46.5" r="2" fill="#b9963f" />
           <rect x="112" y="76" width="14" height="9" rx="2" fill="#9baaa2" stroke="#5d6a72" />
-          <circle cx="130" cy="81" r="27" fill="#61707a" stroke="#2b4557" strokeWidth="1.6" />
-          <circle cx="130" cy="81" r="21" fill="#16232c" />
-          <g transform="translate(130 81)">
+          <circle cx="128" cy="81" r="24" fill="#61707a" stroke="#2b4557" strokeWidth="1.6" />
+          <circle cx="128" cy="81" r="20" fill="#16232c" stroke="#71818a" strokeWidth="0.8" />
+          <circle cx="128" cy="81" r="17" fill="#0c151a" stroke="#263840" strokeWidth="0.7" />
+          <circle
+            cx="128"
+            cy="81"
+            r="22"
+            fill="#57d6a0"
+            opacity="0"
+            className="motor-running-halo"
+          />
+          <g transform="translate(128 81)">
             <g className={`motor-fan${active ? ' is-running' : ''}`}>
               {[0, 120, 240].map((angle) => (
                 <path
@@ -572,23 +604,33 @@ export function DeviceArt({ kind, id, active = false, tripped = false }: DeviceA
               <circle r="1.4" fill="#cfd8dd" />
             </g>
           </g>
-          <circle cx="130" cy="81" r="27" fill="none" stroke="#7c8992" strokeWidth="1.8" />
+          <circle cx="128" cy="81" r="24" fill="none" stroke="#7c8992" strokeWidth="1.8" />
           {[0, 60, 120, 180, 240, 300].map((angle) => (
             <path
               key={angle}
-              d="M 130 55.4 V 60.2"
+              d="M 128 58.4 V 62.8"
               stroke="#a3b0b8"
               strokeWidth="1.5"
               strokeLinecap="round"
-              transform={`rotate(${angle} 130 81)`}
+              transform={`rotate(${angle} 128 81)`}
             />
           ))}
-          <circle cx="139" cy="70" r="1.7" fill="#57d6a0" className="motor-indicator" />
+          <circle cx="143" cy="69" r="1.7" fill="#57d6a0" className="motor-indicator" />
+          <circle
+            cx="143"
+            cy="69"
+            r="3.1"
+            fill="none"
+            stroke="#57d6a0"
+            strokeWidth="0.55"
+            opacity="0.25"
+            className="motor-indicator-ring"
+          />
           <text
             x="80"
             y="142"
             textAnchor="middle"
-            fill="#3f5240"
+            className="motor-art-label"
             fontSize={locale === 'en' ? 7 : 8}
             fontWeight="600"
           >

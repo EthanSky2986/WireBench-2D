@@ -1,18 +1,18 @@
 import {
-  ALL_LOADS,
   CONTACTS,
   DEVICE_MAP,
   DEVICES,
+  ALL_LOADS,
   LOADS,
   MOTOR_IDS,
-  MOTOR_WINDINGS,
   RAIL_IDS,
   SUPPLY_RAILS,
   TERMINAL_IDS,
-  isPhase,
 } from './model';
 import type { Contact, Load, Rail, Wire } from './model';
 import { messageDetails, type MessageDescriptor } from '../i18n/messages';
+import { evaluateMotor, type MotorEvaluation } from './motor';
+import { relateRails } from './supply';
 
 /** A terminal is either tied to one supply rail or unconnected; it is not a measured voltage. */
 export type Potential = Rail | 'floating';
@@ -27,10 +27,11 @@ export interface SimulationFault {
 export interface SimulationResult {
   coils: Record<string, boolean>;
   lamps: Record<string, boolean>;
-  /** A motor runs only while every winding carries a phase-to-phase voltage. */
+  /** True when the modeled three-phase winding-supply criteria are met. */
   motors: Record<string, boolean>;
-  /** Per-winding result for the motor; a stopped motor names which windings are dead. */
+  /** Per-winding result, keyed by stable IDs such as MOTOR:U. */
   windings: Record<string, boolean>;
+  motorEvaluations: Record<string, MotorEvaluation>;
   closedContacts: string[];
   /** Connection to a rail through wires/closed contacts, not a voltage measurement. */
   potential: Record<string, Potential>;
@@ -140,70 +141,65 @@ function conductorPath(
   return { terminals: terminals.reverse(), wireIds: [...new Set(wireIds.reverse())] };
 }
 
-interface ShortPair {
-  from: Rail;
-  to: Rail;
-  descriptor: MessageDescriptor;
-}
-
-/**
- * Rails that must never be tied together by ideal conductors. L–N keeps its
- * original single-phase report; the three-phase main supply adds phase-to-phase
- * and phase-to-neutral checks, and mixing the two supplies is reported instead
- * of silently treating the mixed rails as one legitimate source.
- */
-const SHORT_PAIRS: ShortPair[] = [
-  { from: 'L', to: 'N', descriptor: { code: 'message.fault.short' } },
-  {
-    from: 'U',
-    to: 'V',
-    descriptor: { code: 'message.fault.phase-short', params: { phases: ['U', 'V'] } },
-  },
-  {
-    from: 'V',
-    to: 'W',
-    descriptor: { code: 'message.fault.phase-short', params: { phases: ['V', 'W'] } },
-  },
-  {
-    from: 'U',
-    to: 'W',
-    descriptor: { code: 'message.fault.phase-short', params: { phases: ['U', 'W'] } },
-  },
-  {
-    from: 'U',
-    to: 'N',
-    descriptor: { code: 'message.fault.phase-neutral', params: { phase: 'U' } },
-  },
-  {
-    from: 'V',
-    to: 'N',
-    descriptor: { code: 'message.fault.phase-neutral', params: { phase: 'V' } },
-  },
-  {
-    from: 'W',
-    to: 'N',
-    descriptor: { code: 'message.fault.phase-neutral', params: { phase: 'W' } },
-  },
-  { from: 'L', to: 'U', descriptor: { code: 'message.fault.supply-mix', params: { phase: 'U' } } },
-  { from: 'L', to: 'V', descriptor: { code: 'message.fault.supply-mix', params: { phase: 'V' } } },
-  { from: 'L', to: 'W', descriptor: { code: 'message.fault.supply-mix', params: { phase: 'W' } } },
-];
-
-function shortCircuit(network: Network): SimulationFault | null {
-  for (const pair of SHORT_PAIRS) {
-    if (network.rails[pair.from] !== network.rails[pair.to]) continue;
-    const path = conductorPath(network, SUPPLY_RAILS[pair.from], SUPPLY_RAILS[pair.to]);
-    if (!path) continue;
-    return { kind: 'short', ...messageDetails(pair.descriptor), ...path };
+function directRailFault(network: Network): SimulationFault | null {
+  for (let left = 0; left < RAIL_IDS.length; left++) {
+    for (let right = left + 1; right < RAIL_IDS.length; right++) {
+      const from = RAIL_IDS[left];
+      const to = RAIL_IDS[right];
+      if (network.rails[from] !== network.rails[to]) continue;
+      const relation = relateRails(from, to);
+      const path = conductorPath(network, SUPPLY_RAILS[from], SUPPLY_RAILS[to]);
+      if (!path) continue;
+      const descriptor: MessageDescriptor =
+        relation.kind === 'defined' && relation.source === 'control'
+          ? { code: 'message.fault.short' }
+          : relation.kind === 'defined'
+            ? { code: 'message.fault.phase-short', params: { phases: [from, to] } }
+            : from === 'N' || to === 'N'
+              ? { code: 'message.fault.phase-neutral', params: { phase: from === 'N' ? to : from } }
+              : { code: 'message.fault.supply-mix', params: { phase: from === 'L' ? to : from } };
+      return {
+        kind: relation.kind === 'defined' ? 'short' : 'unsupported',
+        ...messageDetails(descriptor),
+        ...path,
+      };
+    }
   }
   return null;
 }
 
+function localizedLoadEvidence(network: Network, wires: Wire[], loads: Set<Load>) {
+  const terminalsByComponent = new Map<number, Set<string>>();
+  for (const load of loads) {
+    for (const terminal of [load.from, load.to]) {
+      const component = network.component.get(terminal)!;
+      const terminals = terminalsByComponent.get(component) ?? new Set<string>();
+      terminals.add(terminal);
+      terminalsByComponent.set(component, terminals);
+    }
+  }
+  const terminals = new Set<string>();
+  const wireIds = new Set<string>();
+  for (const [component, loadTerminals] of terminalsByComponent) {
+    const rail = network.railOf.get(component);
+    const root = rail ? SUPPLY_RAILS[rail] : loadTerminals.values().next().value;
+    if (!root) continue;
+    terminals.add(root);
+    for (const terminal of loadTerminals) {
+      const path = conductorPath(network, root, terminal);
+      if (!path) continue;
+      path.terminals.forEach((entry) => terminals.add(entry));
+      path.wireIds.forEach((entry) => wireIds.add(entry));
+    }
+  }
+  const implicatedWires = wires.filter((wire) => wireIds.has(wire.id));
+  return { terminals: [...terminals], wireIds: implicatedWires.map((wire) => wire.id) };
+}
+
 /**
- * Contract only ideal conductors. A cluster of unreferenced nodes linked by
- * loads is unsupported only if loads connect that cluster to BOTH control
- * rails. This admits independent parallel loads and disconnected/dangling
- * circuits. Motor windings are loads here too: they never become conductors.
+ * Validate all loads as one network. Recognized motor patterns are evaluated
+ * by the motor matcher; unrecognized winding combinations remain observable
+ * but participate in series-load checks with coils and lamps.
  */
 function unsupportedLoadNetwork(network: Network, wires: Wire[]): SimulationFault | null {
   const loadGraph = new Map<number, { to: number; load: Load }[]>();
@@ -216,127 +212,107 @@ function unsupportedLoadNetwork(network: Network, wires: Wire[]): SimulationFaul
     loadGraph.get(from)!.push({ to, load });
     loadGraph.get(to)!.push({ to: from, load });
   }
-  const isRail = (id: number) => id === network.rails.L || id === network.rails.N;
+  const isRail = (id: number) => RAIL_IDS.some((rail) => network.rails[rail] === id);
+  const loadFault = (loads: Set<Load>, rails: Set<Rail>) => {
+    const evidence = localizedLoadEvidence(network, wires, loads);
+    const devices = [...new Set([...loads].map((load) => load.deviceId))];
+    const controlPair = rails.size === 2 && rails.has('L') && rails.has('N');
+    return {
+      kind: 'unsupported' as const,
+      ...messageDetails(
+        controlPair
+          ? {
+              code: 'message.fault.series',
+              params: { devices },
+            }
+          : {
+              code: 'message.fault.unsupported-supply',
+              params: { devices, rails: [...rails] },
+            },
+      ),
+      ...evidence,
+    };
+  };
+
+  // Coils and lamps only have a defined supply relation across control L/N.
+  for (const load of LOADS) {
+    const fromRail = network.railOf.get(network.component.get(load.from)!);
+    const toRail = network.railOf.get(network.component.get(load.to)!);
+    if (!fromRail || !toRail) continue;
+    const relation = relateRails(fromRail, toRail);
+    if (
+      relation.kind === 'undefined' ||
+      (relation.kind === 'defined' && relation.source !== 'control')
+    ) {
+      return loadFault(new Set([load]), new Set([fromRail, toRail]));
+    }
+  }
+
   const visited = new Set<number>();
   for (const start of loadGraph.keys()) {
     if (isRail(start) || visited.has(start)) continue;
     const cluster = [start];
     const loads = new Set<Load>();
-    const rails = new Set<number>();
+    const rails = new Set<Rail>();
     visited.add(start);
     for (let head = 0; head < cluster.length; head++) {
       for (const edge of loadGraph.get(cluster[head]) ?? []) {
         loads.add(edge.load);
-        if (isRail(edge.to)) rails.add(edge.to);
-        else if (!visited.has(edge.to)) {
+        if (isRail(edge.to)) {
+          const rail = network.railOf.get(edge.to);
+          if (rail) rails.add(rail);
+        } else if (!visited.has(edge.to)) {
           visited.add(edge.to);
           cluster.push(edge.to);
         }
       }
     }
-    if (rails.size === 2) {
-      const terminals = [...new Set([...loads].flatMap((load) => [load.from, load.to]))];
-      const implicated = new Set([...cluster, ...rails]);
-      return {
-        kind: 'unsupported',
-        ...messageDetails({
-          code: 'message.fault.series',
-          params: { devices: [...loads].map((load) => load.deviceId) },
-        }),
-        terminals,
-        wireIds: wires
-          .filter((wire) => implicated.has(network.component.get(wire.from)!))
-          .map((wire) => wire.id),
-      };
-    }
+    const onlyWindings = [...loads].every((load) => load.kind === 'winding');
+    if (rails.size >= 2 && !onlyWindings) return loadFault(loads, rails);
   }
   return null;
 }
 
 function poweredLoad(load: Load, network: Network): boolean {
-  const from = network.component.get(load.from)!;
-  const to = network.component.get(load.to)!;
-  return (
-    (from === network.rails.L && to === network.rails.N) ||
-    (from === network.rails.N && to === network.rails.L)
-  );
+  const from = network.railOf.get(network.component.get(load.from)!);
+  const to = network.railOf.get(network.component.get(load.to)!);
+  if (!from || !to) return false;
+  const relation = relateRails(from, to);
+  return relation.kind === 'defined' && relation.source === 'control';
 }
 
-/**
- * A star point is a node shared by at least two different windings that is tied
- * to no supply rail. Wiring U2/V2/W2 together (Y) creates it: a winding is a
- * load and not a conductor, so the node stays floating in the terminal map
- * while the winding between it and a phase still spans two phases.
- */
-function starComponents(network: Network): Set<number> {
-  const windingsByComponent = new Map<number, Set<number>>();
-  MOTOR_WINDINGS.forEach((winding, index) => {
-    for (const terminal of [winding.from, winding.to]) {
+function evaluateMotorNetwork(network: Network): MotorEvaluation {
+  return evaluateMotor({
+    end: (terminal) => {
       const component = network.component.get(terminal)!;
-      const windings = windingsByComponent.get(component) ?? new Set<number>();
-      windings.add(index);
-      windingsByComponent.set(component, windings);
-    }
+      return { node: component, rail: network.railOf.get(component) ?? null };
+    },
   });
-  const star = new Set<number>();
-  for (const [component, windings] of windingsByComponent) {
-    if (windings.size >= 2 && !network.railOf.has(component)) star.add(component);
-  }
-  return star;
-}
-
-/** One winding: two different phases at its ends, or one phase and the motor star point. */
-function windingEnergized(winding: Load, network: Network, star: Set<number>): boolean {
-  const from = network.component.get(winding.from)!;
-  const to = network.component.get(winding.to)!;
-  if (from === to) return false;
-  const fromRail = network.railOf.get(from);
-  const toRail = network.railOf.get(to);
-  const fromPhase = fromRail && isPhase(fromRail) ? fromRail : null;
-  const toPhase = toRail && isPhase(toRail) ? toRail : null;
-  if (fromPhase && toPhase) return fromPhase !== toPhase;
-  if (fromPhase && star.has(to)) return true;
-  if (toPhase && star.has(from)) return true;
-  // A single-phase L/N feed, an open winding and two ends on one node all stop.
-  return false;
-}
-
-/** The phase rail feeding one winding end, when that end is tied to a phase. */
-function phaseOf(network: Network, terminal: string): Rail | null {
-  const rail = network.railOf.get(network.component.get(terminal)!);
-  return rail && isPhase(rail) ? rail : null;
-}
-
-function motorStates(network: Network): {
-  motors: Record<string, boolean>;
-  windings: Record<string, boolean>;
-} {
-  const star = starComponents(network);
-  const energized = MOTOR_WINDINGS.map((winding) => windingEnergized(winding, network, star));
-  // A rotating field needs all three windings and three distinct phases feeding
-  // them. Wiring L1/L2/L3 to the same phase leaves every winding "energized"
-  // between that phase and the star point, yet nothing turns.
-  const supplied = MOTOR_WINDINGS.map((winding) => phaseOf(network, winding.from));
-  const rotating = new Set(supplied.filter((rail): rail is Rail => rail !== null));
-  const running = energized.every(Boolean) && rotating.size === MOTOR_WINDINGS.length;
-  return {
-    motors: Object.fromEntries(MOTOR_IDS.map((id) => [id, running])),
-    windings: Object.fromEntries(
-      MOTOR_WINDINGS.map((winding, index) => [winding.from, energized[index]]),
-    ),
-  };
 }
 
 function stopped(
   inputs: Record<string, boolean>,
   fault: SimulationFault | null = null,
+  wires: Wire[] = [],
 ): SimulationResult {
   const coils = allFalse(COIL_IDS);
+  const validWires = wires.every(
+    (wire) => VALID_TERMINALS.has(wire.from) && VALID_TERMINALS.has(wire.to),
+  );
+  const structuralMotor = validWires
+    ? evaluateMotorNetwork(buildNetwork(wires, []))
+    : evaluateMotor({ end: (terminal) => ({ node: TERMINAL_IDS.indexOf(terminal), rail: null }) });
+  const motor: MotorEvaluation = {
+    ...structuralMotor,
+    running: false,
+    windings: allFalse(Object.keys(structuralMotor.windings)),
+  };
   return {
     coils,
     lamps: allFalse(LAMP_IDS),
     motors: allFalse(MOTOR_IDS),
-    windings: Object.fromEntries(MOTOR_WINDINGS.map((winding) => [winding.from, false])),
+    windings: motor.windings,
+    motorEvaluations: Object.fromEntries(MOTOR_IDS.map((id) => [id, motor])),
     closedContacts: getClosedContacts(coils, inputs).map((contact) => contact.id),
     potential: Object.fromEntries(
       TERMINAL_IDS.map((terminal) => [terminal, 'floating' as Potential]),
@@ -356,24 +332,28 @@ export function simulate(
   powered: boolean,
   previousCoils: Record<string, boolean> = {},
 ): SimulationResult {
-  if (!powered) return stopped(inputs);
+  if (!powered) return stopped(inputs, null, wires);
 
   const invalid = wires.filter(
     (wire) => !VALID_TERMINALS.has(wire.from) || !VALID_TERMINALS.has(wire.to),
   );
   if (invalid.length)
-    return stopped(inputs, {
-      kind: 'unsupported',
-      ...messageDetails({ code: 'message.fault.unknown-terminal' }),
-      terminals: [
-        ...new Set(
-          invalid
-            .flatMap((wire) => [wire.from, wire.to])
-            .filter((terminal) => !VALID_TERMINALS.has(terminal)),
-        ),
-      ],
-      wireIds: invalid.map((wire) => wire.id),
-    });
+    return stopped(
+      inputs,
+      {
+        kind: 'unsupported',
+        ...messageDetails({ code: 'message.fault.unknown-terminal' }),
+        terminals: [
+          ...new Set(
+            invalid
+              .flatMap((wire) => [wire.from, wire.to])
+              .filter((terminal) => !VALID_TERMINALS.has(terminal)),
+          ),
+        ],
+        wireIds: invalid.map((wire) => wire.id),
+      },
+      wires,
+    );
 
   let coils = Object.fromEntries(COIL_IDS.map((id) => [id, !!previousCoils[id]]));
   const seen = new Set<string>();
@@ -384,22 +364,27 @@ export function simulate(
     if (seen.has(key)) {
       const devices = [...changedCoils];
       const terminals = devices.flatMap((id) => [`${id}:A1`, `${id}:A2`]);
-      return stopped(inputs, {
-        kind: 'unstable',
-        ...messageDetails({ code: 'message.fault.unstable', params: { devices } }),
-        terminals,
-        wireIds: wires
-          .filter((wire) =>
-            [wire.from, wire.to].some((terminal) => devices.includes(terminal.split(':')[0])),
-          )
-          .map((wire) => wire.id),
-      });
+      return stopped(
+        inputs,
+        {
+          kind: 'unstable',
+          ...messageDetails({ code: 'message.fault.unstable', params: { devices } }),
+          terminals,
+          wireIds: wires
+            .filter((wire) =>
+              [wire.from, wire.to].some((terminal) => devices.includes(terminal.split(':')[0])),
+            )
+            .map((wire) => wire.id),
+        },
+        wires,
+      );
     }
     seen.add(key);
     const contacts = getClosedContacts(coils, inputs);
     const network = buildNetwork(wires, contacts);
-    const fault = shortCircuit(network) ?? unsupportedLoadNetwork(network, wires);
-    if (fault) return stopped(inputs, fault);
+    const motor = evaluateMotorNetwork(network);
+    const fault = directRailFault(network) ?? unsupportedLoadNetwork(network, wires);
+    if (fault) return stopped(inputs, fault, wires);
 
     const next = allFalse(COIL_IDS);
     const lamps = allFalse(LAMP_IDS);
@@ -414,12 +399,12 @@ export function simulate(
           network.railOf.get(network.component.get(terminal)!) ?? 'floating',
         ]),
       );
-      const motor = motorStates(network);
       return {
         coils: next,
         lamps,
-        motors: motor.motors,
+        motors: Object.fromEntries(MOTOR_IDS.map((id) => [id, motor.running])),
         windings: motor.windings,
+        motorEvaluations: Object.fromEntries(MOTOR_IDS.map((id) => [id, motor])),
         closedContacts: contacts.map((contact) => contact.id),
         potential,
         fault: null,

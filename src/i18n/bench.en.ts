@@ -39,8 +39,8 @@ export const en = {
   'bench.inspectDevice': '{id} {name}, inspect device',
   'bench.coilOn': 'Coil energized',
   'bench.coilOff': 'Coil released',
-  'bench.motorRunning': 'Motor running',
-  'bench.motorStopped': 'Motor stopped',
+  'bench.motorRunning': 'Three-phase run criteria met',
+  'bench.motorStopped': 'Three-phase run criteria not met',
   'bench.hold': 'Press and hold',
   'bench.reset': 'Click to reset',
   'bench.trigger': 'Click to actuate',
@@ -113,11 +113,11 @@ export const en = {
   'inspector.estopHint':
     'The emergency stop only affects circuits wired through its normally closed contact. Reset restores that contact.',
   'inspector.motorHint':
-    'U1–U2, V1–V2 and W1–W2 are three windings. A Y connection shorts U2, V2 and W2 into a star point; a delta connection cross-links U1–W2, V1–U2 and W1–V2. You wire either one yourself. The motor runs only while every winding spans two different phases; this means energized, not direction or speed.',
-  'inspector.motorRunning': 'Running',
-  'inspector.motorStopped': 'Stopped',
+    'U1–U2, V1–V2 and W1–W2 are three windings. A Y connection joins either U1/V1/W1 or U2/V2/W2 as the star point; a delta connection cross-links U1–W2, V1–U2 and W1–V2. You wire either one yourself. The model checks connectivity: all three windings must have a supported supply path and U, V and W must all be present. It does not model phase sequence, rotor inertia, or real motor behavior under phase loss, including temperature and torque.',
+  'inspector.motorRunning': 'Three-phase run criteria met',
+  'inspector.motorStopped': 'Three-phase run criteria not met',
   'inspector.supplyHint':
-    'L/N is the single-phase training control supply. U2, V2 and W2 are the three phase lines of the three-phase training supply, rated 380 V line-to-line. The phases are independent and feed contactor main contacts or the motor terminal box. The simulation only resolves connectivity; it does not calculate current, speed or rotation direction.',
+    'L/N is the single-phase training control supply. U2, V2 and W2 are three independent phase rails for the training circuit. They can feed contactor main contacts or the motor terminal box. The simulation only resolves connectivity; it does not assume a physical voltage or calculate current, speed or rotation direction.',
   'inspector.empty': 'Select a device or wire to view its details',
   'inspector.activity': 'Activity',
   'inspector.model': 'Switching model',

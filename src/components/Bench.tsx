@@ -21,6 +21,7 @@ import type { Point } from '../layout';
 import { DEVICE_MAP } from '../sim/model';
 import type { Wire } from '../sim/model';
 import type { SimulationResult } from '../sim/engine';
+import { hasSupplyPath } from '../sim/loadTrace';
 import type { LoadTrace } from '../sim/loadTrace';
 import { RefinedDeviceArt } from './RefinedDeviceArt';
 import { TerminalStripArt } from './TerminalStripArt';
@@ -138,7 +139,7 @@ export default function Bench(p: Props) {
   const maskPrefix = useId();
   const traceWires = useMemo(() => new Set(p.trace?.wireIds), [p.trace]);
   const traceTerminals = useMemo(() => new Set(p.trace?.terminalIds), [p.trace]);
-  const hasTrace = p.trace?.status === 'energized';
+  const hasTrace = !!p.trace && hasSupplyPath(p.trace.status);
   const host = useRef<HTMLDivElement>(null),
     svg = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ w: 1000, h: 720 }),
@@ -571,7 +572,7 @@ export default function Bench(p: Props) {
                   cy={part.y + part.size * 0.94}
                   rx={part.size * 0.4}
                   ry={part.size * 0.055}
-                  fill="#1c2a24"
+                  fill="var(--device-shadow)"
                   opacity="0.16"
                   pointerEvents="none"
                   aria-hidden="true"
@@ -864,7 +865,7 @@ export default function Bench(p: Props) {
                   !hasTrace &&
                   p.powered &&
                   !p.result.fault &&
-                  p.result.potential[selectedWire.from] === 'L'
+                  RAIL_COLORS[p.result.potential[selectedWire.from]] !== undefined
                 }
                 traced={traceWires.has(selectedWire.id)}
               />
@@ -923,7 +924,9 @@ export default function Bench(p: Props) {
                 key={s.id}
                 role="button"
                 tabIndex={0}
-                aria-label={t('bench.terminalLabel', { id: s.id })}
+                aria-label={`${t('bench.terminalLabel', { id: s.id })}, ${t('bench.potential', {
+                  value: potential === 'floating' ? t('bench.floating') : potential,
+                })}`}
                 className={`socket ${selected ? 'active' : ''}`}
                 onPointerDown={(e) => {
                   if (e.button === 0 && p.mode === 'wire' && !space) e.stopPropagation();
@@ -979,8 +982,14 @@ export default function Bench(p: Props) {
                   cx={s.x}
                   cy={s.y}
                   r="6.2"
-                  fill={selected ? '#d5f1e5' : (liveRail ?? '#697e70')}
-                  stroke={selected ? '#127659' : liveRail ? '#0d1a12' : '#a7b5ab'}
+                  fill={selected ? 'var(--socket-selected)' : (liveRail ?? 'var(--socket-idle)')}
+                  stroke={
+                    selected
+                      ? 'var(--socket-selected-stroke)'
+                      : liveRail
+                        ? 'var(--socket-live-stroke)'
+                        : 'var(--socket-idle-stroke)'
+                  }
                   strokeWidth={selected ? 2.5 : liveRail ? 1.4 : 1}
                   opacity={selected ? 1 : liveRail ? 0.92 : 1}
                 />
@@ -989,10 +998,18 @@ export default function Bench(p: Props) {
                   cy={s.y}
                   r="3.7"
                   fill={
-                    selected ? '#16785c' : liveRail ? liveRail : connected ? '#cedccc' : '#233c31'
+                    selected
+                      ? 'var(--socket-selected-core)'
+                      : liveRail
+                        ? liveRail
+                        : connected
+                          ? 'var(--socket-connected-core)'
+                          : 'var(--socket-idle-core)'
                   }
                 />
-                {connected && <circle cx={s.x} cy={s.y} r="1.5" fill="#e6ede2" />}
+                {connected && (
+                  <circle cx={s.x} cy={s.y} r="1.5" fill="var(--socket-center-highlight)" />
+                )}
                 <title>
                   {s.id}
                   {counts[s.id] ? t('bench.wireCountSuffix', { count: counts[s.id] }) : ''}

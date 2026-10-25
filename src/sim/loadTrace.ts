@@ -1,22 +1,37 @@
 import type { Potential, SimulationResult } from './engine';
 import {
   CONTACTS,
+  LOADS,
   MOTOR_WINDINGS,
   OBSERVABLE_LOADS,
   SUPPLY_RAILS,
   TERMINAL_IDS,
-  type ObservableLoad,
+  type MotorWinding,
   type Rail,
   type Wire,
 } from './model';
+import type { MotorProblem } from './motor';
 
 export interface LoadTrace {
   /** The selected load's device ID, as defined by OBSERVABLE_LOADS. */
   loadId: string;
-  status: 'energized' | 'unpowered' | 'fault' | 'unconnected' | 'same-rail' | 'partial';
+  status:
+    | 'energized'
+    | 'energized-not-running'
+    | 'unpowered'
+    | 'fault'
+    | 'unconnected'
+    | 'same-rail'
+    | 'partial';
   /** True when this entry is one device with several windings, i.e. the motor. */
   multiWinding: boolean;
-  ends: { terminalId: string; potential: Potential }[];
+  ends: {
+    terminalId: string;
+    potential: Potential;
+    connection: 'rail' | 'star-point' | 'floating';
+  }[];
+  windings: { id: string; phase: MotorWinding['phase']; supplied: boolean }[];
+  motorProblem?: MotorProblem;
   wireIds: string[];
   contactIds: string[];
   terminalIds: string[];
@@ -36,6 +51,10 @@ interface ConductorBlocks {
 }
 
 const TERMINAL_INDEX = new Map(TERMINAL_IDS.map((id, index) => [id, index]));
+
+export function hasSupplyPath(status: LoadTrace['status']): boolean {
+  return status === 'energized' || status === 'energized-not-running' || status === 'partial';
+}
 
 function isRail(potential: Potential): potential is Rail {
   return potential !== 'floating';
@@ -118,12 +137,12 @@ function conductorBlocks(wires: Wire[], result: SimulationResult): ConductorBloc
   return { edges, blocks, tree };
 }
 
-function supportEdges(network: ConductorBlocks, from: string, rail: Rail): number[] | null {
+function supportBetween(network: ConductorBlocks, from: string, target: string): number[] | null {
   const start = TERMINAL_INDEX.get(from)!;
-  const target = TERMINAL_INDEX.get(SUPPLY_RAILS[rail])!;
+  const targetIndex = TERMINAL_INDEX.get(target)!;
   const previous = new Map<number, number>([[start, -1]]);
   const queue = [start];
-  for (let head = 0; head < queue.length && !previous.has(target); head++) {
+  for (let head = 0; head < queue.length && !previous.has(targetIndex); head++) {
     const vertex = queue[head];
     for (const next of network.tree[vertex]) {
       if (previous.has(next)) continue;
@@ -131,14 +150,18 @@ function supportEdges(network: ConductorBlocks, from: string, rail: Rail): numbe
       queue.push(next);
     }
   }
-  if (!previous.has(target)) return null;
+  if (!previous.has(targetIndex)) return null;
   const support: number[] = [];
-  for (let cursor = target; cursor !== start; cursor = previous.get(cursor)!) {
+  for (let cursor = targetIndex; cursor !== start; cursor = previous.get(cursor)!) {
     if (cursor >= TERMINAL_IDS.length) {
       support.push(...network.blocks[cursor - TERMINAL_IDS.length]);
     }
   }
   return support;
+}
+
+function supportEdges(network: ConductorBlocks, from: string, rail: Rail): number[] | null {
+  return supportBetween(network, from, SUPPLY_RAILS[rail]);
 }
 
 /**
@@ -153,21 +176,42 @@ export function traceLoad(
   loadId: string,
 ): LoadTrace {
   const entry = OBSERVABLE_LOADS.find((candidate) => candidate.deviceId === loadId);
-  // A motor is one device with three windings; explain all of them together.
-  const windings =
-    entry?.kind === 'winding' ? MOTOR_WINDINGS : entry ? [entry] : ([] as typeof MOTOR_WINDINGS);
-  const multiWinding = windings.length > 1;
-  const ends: LoadTrace['ends'] = windings.flatMap((winding) =>
+  const selectedMotor = entry?.kind === 'motor';
+  const loads = selectedMotor
+    ? MOTOR_WINDINGS
+    : entry
+      ? LOADS.filter((load) => load.deviceId === loadId)
+      : [];
+  const motorEvaluation = selectedMotor ? result.motorEvaluations[loadId] : undefined;
+  const motorProblem =
+    selectedMotor && powered && !result.fault ? motorEvaluation?.problem : undefined;
+  const starTerminals = new Set(motorEvaluation?.starTerminals ?? []);
+  const ends: LoadTrace['ends'] = loads.flatMap((winding) =>
     [winding.from, winding.to].map((terminalId) => ({
       terminalId,
       potential: result.potential[terminalId] ?? 'floating',
+      connection:
+        result.potential[terminalId] !== undefined && result.potential[terminalId] !== 'floating'
+          ? 'rail'
+          : starTerminals.has(terminalId)
+            ? 'star-point'
+            : 'floating',
     })),
   );
+  const windings = selectedMotor
+    ? MOTOR_WINDINGS.map((winding) => ({
+        id: winding.id,
+        phase: winding.phase,
+        supplied: !!motorEvaluation?.windings[winding.id],
+      }))
+    : [];
   const empty: LoadTrace = {
     loadId,
-    multiWinding,
+    multiWinding: selectedMotor,
     status: 'unconnected',
     ends,
+    windings,
+    motorProblem,
     wireIds: [],
     contactIds: [],
     terminalIds: [],
@@ -176,25 +220,27 @@ export function traceLoad(
   // contact graph. Never reconstruct a successful trace from that state.
   if (result.fault) return { ...empty, status: 'fault' };
   if (!powered) return { ...empty, status: 'unpowered' };
-  if (!windings.length) return empty;
+  if (!loads.length) return empty;
 
-  const energized = (load: (typeof MOTOR_WINDINGS)[number]): boolean =>
+  const energized = (load: (typeof loads)[number]): boolean =>
     load.kind === 'winding'
-      ? !!result.windings[load.from]
+      ? !!result.windings[MOTOR_WINDINGS.find((winding) => winding.from === load.from)?.id ?? '']
       : load.kind === 'coil'
         ? !!result.coils[loadId]
         : !!result.lamps[loadId];
-  const active = windings.filter(energized);
+  const active = loads.filter(energized);
   if (!active.length) {
     // Naming why a single-winding load is dead keeps the existing hints valid.
     const [from, to] = ends;
-    if (windings.length === 1 && isRail(from.potential) && from.potential === to.potential)
+    if (loads.length === 1 && isRail(from.potential) && from.potential === to.potential)
       return { ...empty, status: 'same-rail' };
     return empty;
   }
-  // Some but not all windings carry current: explain the live ones, but the
-  // caller must still be able to say the motor as a whole is not running.
-  const partial = multiWinding && active.length < windings.length;
+  // Some but not all windings have a supported supply path: explain those
+  // connections while leaving physical behavior under phase loss unmodeled.
+  const partial = selectedMotor && active.length < loads.length;
+  const energizedWithoutRunCriteria =
+    selectedMotor && active.length === loads.length && !result.motors[loadId];
 
   const network = conductorBlocks(wires, result);
   const wiresInTrace = new Set<string>();
@@ -205,8 +251,8 @@ export function traceLoad(
     const toRail = result.potential[winding.to] ?? 'floating';
     const fromEdges = isRail(fromRail) ? supportEdges(network, winding.from, fromRail) : null;
     const toEdges = isRail(toRail) ? supportEdges(network, winding.to, toRail) : null;
-    // A star point is floating, so one side of a Y winding may legitimately
-    // have no rail path; the winding still counts as energized by the engine.
+    // A star point is floating, so one side of a Y winding may have no direct
+    // rail path even when the engine recognizes a multi-phase supply.
     if (fromEdges === null && toEdges === null) continue;
     terminalsInTrace.add(winding.from);
     terminalsInTrace.add(winding.to);
@@ -218,12 +264,40 @@ export function traceLoad(
       terminalsInTrace.add(TERMINAL_IDS[edge.to]);
     }
   }
+  // A floating Y point has no rail path of its own. Include the actual
+  // conductors joining its winding ends so the star link is visible evidence,
+  // while keeping the winding itself out of the conductor graph.
+  if (
+    selectedMotor &&
+    motorEvaluation &&
+    motorEvaluation.starRail === null &&
+    motorEvaluation.starTerminals.length > 1
+  ) {
+    const [firstStarTerminal, ...otherStarTerminals] = motorEvaluation.starTerminals;
+    for (const starTerminal of otherStarTerminals) {
+      const starEdges = supportBetween(network, firstStarTerminal, starTerminal);
+      if (!starEdges) continue;
+      terminalsInTrace.add(firstStarTerminal);
+      terminalsInTrace.add(starTerminal);
+      for (const edgeId of starEdges) {
+        const edge = network.edges[edgeId];
+        if (edge.wireId !== undefined) wiresInTrace.add(edge.wireId);
+        if (edge.contactId !== undefined) contactsInTrace.add(edge.contactId);
+        terminalsInTrace.add(TERMINAL_IDS[edge.from]);
+        terminalsInTrace.add(TERMINAL_IDS[edge.to]);
+      }
+    }
+  }
   // No conductor evidence at all means this trace cannot explain the result;
   // reporting "energized" with an empty path would present a claim, not a path.
   if (!terminalsInTrace.size) return empty;
   return {
     ...empty,
-    status: partial ? 'partial' : 'energized',
+    status: partial
+      ? 'partial'
+      : energizedWithoutRunCriteria
+        ? 'energized-not-running'
+        : 'energized',
     wireIds: [...wiresInTrace].sort(),
     contactIds: [...contactsInTrace].sort(),
     terminalIds: [...terminalsInTrace].sort(),
@@ -237,18 +311,28 @@ export function traceLoad(
  * is wired still wins when it is the most connected one.
  */
 export function preferredLoadId(wires: Wire[], preferred: string | null): string {
-  const wired = (load: ObservableLoad): number =>
-    load.terminals.filter((terminal) =>
-      wires.some((wire) => wire.from === terminal || wire.to === terminal),
-    ).length;
-  // The preferred device wins only while it stays one of the most-wired loads;
-  // switching examples must not keep a stale target from the previous circuit.
-  const ranked = OBSERVABLE_LOADS.map((load) => ({ load, count: wired(load) }))
-    .filter((entry) => entry.count > 0)
-    .sort((left, right) => right.count - left.count);
+  const connected = new Set(wires.flatMap((wire) => [wire.from, wire.to]));
+  const ranked = OBSERVABLE_LOADS.map((load) => ({
+    load,
+    completePairs: load.terminalPairs.filter(
+      ([from, to]) => connected.has(from) && connected.has(to),
+    ).length,
+  }))
+    .filter((entry) => entry.completePairs > 0)
+    .sort((left, right) => {
+      const coverage =
+        right.completePairs * left.load.terminalPairs.length -
+        left.completePairs * right.load.terminalPairs.length;
+      return coverage || right.completePairs - left.completePairs;
+    });
   if (ranked.length > 0) {
-    const top = ranked[0].count;
-    const best = ranked.filter((entry) => entry.count === top);
+    const top = ranked[0];
+    const best = ranked.filter(
+      (entry) =>
+        entry.completePairs * top.load.terminalPairs.length ===
+          top.completePairs * entry.load.terminalPairs.length &&
+        entry.completePairs === top.completePairs,
+    );
     const matching = best.find((entry) => entry.load.deviceId === preferred);
     return (matching ?? best[0]).load.deviceId;
   }

@@ -99,6 +99,38 @@ describe('loads require a complete, independent supply path', () => {
     ).toBe(false);
   });
 
+  it.each([
+    ['two phase rails', 'POWER:U2', 'POWER:V2'],
+    ['mixed control and phase rails', 'POWER:L', 'POWER:U2'],
+  ])('reports a control load across %s as unsupported', (_case, from, to) => {
+    const state = simulate(connect([from, 'HL2:1'], ['HL2:2', to]), {}, true);
+    expect(state.fault?.kind).toBe('unsupported');
+    expect(state.fault?.descriptor.code).toBe('message.fault.unsupported-supply');
+    expect(state.lamps.HL2).toBe(false);
+  });
+
+  it('localizes an unsupported lamp supply without highlighting unrelated motor feeders', () => {
+    const wires = connect(
+      ['POWER:U2', 'HL2:1'],
+      ['HL2:2', 'POWER:V2'],
+      ['POWER:U2', 'MOTOR:U1'],
+      ['POWER:V2', 'MOTOR:V1'],
+      ['POWER:W2', 'MOTOR:W1'],
+      ['MOTOR:U2', 'MOTOR:V2'],
+      ['MOTOR:V2', 'MOTOR:W2'],
+    );
+    const state = simulate(wires, {}, true);
+    expect(state.fault?.descriptor.code).toBe('message.fault.unsupported-supply');
+    expect(state.fault?.wireIds).toEqual(['w1', 'w2']);
+  });
+
+  it('reports a control lamp in series with a motor winding', () => {
+    const wires = connect(['POWER:L', 'MOTOR:U1'], ['MOTOR:U2', 'HL2:1'], ['HL2:2', 'POWER:N']);
+    const state = simulate(wires, {}, true);
+    expect(state.fault?.descriptor.code).toBe('message.fault.series');
+    expect(state.fault?.wireIds).toEqual(['w1', 'w2', 'w3']);
+  });
+
   it('supports all coils and lamps on parallel branches without treating loads as shorts', () => {
     const pairs: [string, string][] = [1, 2, 3].flatMap(
       (n) =>
@@ -438,7 +470,7 @@ describe('three-phase main supply', () => {
     expect(Object.values(state.lamps).some(Boolean)).toBe(false);
   });
 
-  it('detects a phase-to-neutral short through a closed contact path', () => {
+  it('reports a phase-to-control-N connection without asserting a physical short', () => {
     const state = simulate(
       connect(
         ['POWER:U2', 'KM1:L1'],
@@ -449,8 +481,14 @@ describe('three-phase main supply', () => {
       { SB3: true },
       true,
     );
-    expect(state.fault?.kind).toBe('short');
+    expect(state.fault?.kind).toBe('unsupported');
     expect(state.fault?.descriptor.code).toBe('message.fault.phase-neutral');
+  });
+
+  it('reports mixed control and phase rails as an unsupported supply connection', () => {
+    const state = simulate(connect(['POWER:L', 'POWER:U2']), {}, true);
+    expect(state.fault?.kind).toBe('unsupported');
+    expect(state.fault?.descriptor.code).toBe('message.fault.supply-mix');
   });
 
   it('does not report a phase short merely because both terminals exist', () => {
@@ -506,7 +544,7 @@ describe('motor load', () => {
     expect(state.motors.MOTOR).toBe(false);
   });
 
-  it('runs a Y-connected motor while the contactor holds, and stops when it releases', () => {
+  it('meets the run criteria for a Y-connected motor while the contactor holds', () => {
     const running = simulate(yCircuit('Y'), {}, true);
     expect(running.fault).toBeNull();
     expect(running.coils.KM1).toBe(true);
@@ -516,7 +554,109 @@ describe('motor load', () => {
     expect(stopped.motors.MOTOR).toBe(false);
   });
 
-  it('runs a delta-connected motor wired by the user', () => {
+  it('accepts a Y connection with the phase feeds on the other winding ends', () => {
+    const reversedY = connect(
+      ['POWER:U2', 'KM1:L1'],
+      ['KM1:T1', 'MOTOR:U2'],
+      ['POWER:V2', 'KM1:L2'],
+      ['KM1:T2', 'MOTOR:V2'],
+      ['POWER:W2', 'KM1:L3'],
+      ['KM1:T3', 'MOTOR:W2'],
+      ['MOTOR:U1', 'MOTOR:V1'],
+      ['MOTOR:V1', 'MOTOR:W1'],
+      ['POWER:L', 'KM1:A1'],
+      ['KM1:A2', 'POWER:N'],
+    );
+    const state = simulate(reversedY, {}, true);
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(true);
+  });
+
+  it('keeps an undefined motor star reference local to the motor observation', () => {
+    const wires = [
+      ...yCircuit('Y'),
+      { id: 'star-neutral', from: 'MOTOR:W2', to: 'POWER:N', color: '#000' },
+    ];
+    const state = simulate(wires, {}, true);
+
+    expect(state.fault).toBeNull();
+    expect(state.coils.KM1).toBe(true);
+    expect(state.potential['KM1:A1']).toBe('L');
+    expect(state.potential['KM1:A2']).toBe('N');
+    expect(state.motors.MOTOR).toBe(false);
+    expect(state.motorEvaluations.MOTOR.problem).toBe('undefined-star-rail');
+    expect(Object.values(state.windings).every(Boolean)).toBe(false);
+  });
+
+  it('keeps control circuits running when a motor has a defined but unsupported phase pattern', () => {
+    const repeatedPhaseDelta = connect(
+      ['POWER:U2', 'MOTOR:U1'],
+      ['MOTOR:U2', 'POWER:V2'],
+      ['POWER:U2', 'MOTOR:V1'],
+      ['MOTOR:V2', 'POWER:V2'],
+      ['POWER:V2', 'MOTOR:W1'],
+      ['MOTOR:W2', 'POWER:W2'],
+      ['POWER:L', 'KM1:A1'],
+      ['KM1:A2', 'POWER:N'],
+    );
+    const state = simulate(repeatedPhaseDelta, {}, true);
+
+    expect(state.fault).toBeNull();
+    expect(state.coils.KM1).toBe(true);
+    expect(state.potential['KM1:A1']).toBe('L');
+    expect(state.potential['KM1:A2']).toBe('N');
+    expect(Object.values(state.windings).every(Boolean)).toBe(true);
+    expect(state.motorEvaluations.MOTOR).toMatchObject({
+      problem: 'no-pattern',
+      starRail: 'V',
+      running: false,
+    });
+    expect(state.motors.MOTOR).toBe(false);
+  });
+
+  it('checks a phase-connected star point against actual rail relationships', () => {
+    const wires = connect(
+      ['POWER:U2', 'MOTOR:U1'],
+      ['POWER:U2', 'MOTOR:U2'],
+      ['POWER:V2', 'MOTOR:V1'],
+      ['POWER:U2', 'MOTOR:V2'],
+      ['POWER:W2', 'MOTOR:W1'],
+      ['POWER:U2', 'MOTOR:W2'],
+    );
+    const state = simulate(wires, {}, true);
+
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+    expect(state.motorEvaluations.MOTOR.problem).toBe('no-pattern');
+    expect(state.windings['MOTOR:U']).toBe(false);
+    expect(state.windings['MOTOR:V']).toBe(true);
+    expect(state.windings['MOTOR:W']).toBe(true);
+  });
+
+  it('identifies an undefined phase-to-neutral motor winding supply', () => {
+    const wires = connect(
+      ['POWER:L', 'KM1:A1'],
+      ['KM1:A2', 'POWER:N'],
+      ['POWER:U2', 'MOTOR:U1'],
+      ['POWER:N', 'MOTOR:U2'],
+    );
+    const state = simulate(wires, {}, true);
+
+    expect(state.fault).toBeNull();
+    expect(state.coils.KM1).toBe(true);
+    expect(state.motors.MOTOR).toBe(false);
+    expect(state.motorEvaluations.MOTOR.problem).toBe('undefined-supply');
+  });
+
+  it('does not depend on the direction stored for any user wire', () => {
+    const circuit = yCircuit('Y');
+    const reversed = circuit.map((wire) => ({ ...wire, from: wire.to, to: wire.from }));
+    expect(simulate(reversed, {}, true).motorEvaluations.MOTOR).toMatchObject(
+      simulate(circuit, {}, true).motorEvaluations.MOTOR,
+    );
+  });
+
+  it('meets the run criteria for a delta-connected motor wired by the user', () => {
     const state = simulate(yCircuit('delta'), {}, true);
     expect(state.fault).toBeNull();
     expect(state.motors.MOTOR).toBe(true);
@@ -622,7 +762,7 @@ describe('contactor self-holding with a motor example', () => {
   });
 });
 
-describe('motor needs three distinct phases', () => {
+describe('motor needs three distinct phases to meet the modeled run criteria', () => {
   const main = (): [string, string][] => [
     ['POWER:U2', 'KM1:L1'],
     ['KM1:T1', 'MOTOR:U1'],
@@ -636,26 +776,26 @@ describe('motor needs three distinct phases', () => {
     ['KM1:A2', 'POWER:N'],
   ];
 
-  it('does not run when all three main contacts are fed from one phase', () => {
+  it('does not recognize winding supply when all contacts feed the floating star from one phase', () => {
     const wires = connect(...main()).map((wire) =>
       wire.from === 'POWER:V2' || wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:U2' } : wire,
     );
     const state = simulate(wires, {}, true);
     expect(state.fault).toBeNull();
-    // Each winding does span a phase and the star point, so the windings report
-    // energized; only the missing phase rotation keeps the motor stopped.
-    expect(state.windings['MOTOR:U1']).toBe(true);
+    expect(Object.values(state.windings).every(Boolean)).toBe(false);
     expect(state.motors.MOTOR).toBe(false);
   });
 
-  it('does not run when two phases are the same', () => {
+  it('does not meet the run criteria when two phases are the same', () => {
     const wires = connect(...main()).map((wire) =>
       wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:V2' } : wire,
     );
-    expect(simulate(wires, {}, true).motors.MOTOR).toBe(false);
+    const state = simulate(wires, {}, true);
+    expect(Object.values(state.windings).every(Boolean)).toBe(true);
+    expect(state.motors.MOTOR).toBe(false);
   });
 
-  it('still runs when all three phases are present', () => {
+  it('meets the run criteria when all three phases are present', () => {
     expect(simulate(connect(...main()), {}, true).motors.MOTOR).toBe(true);
   });
 });

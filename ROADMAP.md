@@ -26,6 +26,6 @@ English: Improve wire readability while preserving manual routes and topology; b
 
 ## Requires new electrical scope / 需要先补充电气定义
 
-三相教学电源与电机负载已进入同一套仿真规则：相线独立、相间短路可检出，电机按绕组两端是否跨接两条不同相线判定运转。仍未支持真实 24 V / 220 V 数值、电机转向与转速、正反转与自动往返、温升和热保护延时；这些需要明确器件参数、实验预期和模型边界后再排入实现。FR 的 TEST/RESET 目前只操作逻辑跳闸状态，不模拟真实热过载或旋钮整定值。
+三相教学电源与电机负载已进入同一套仿真规则：相线独立、相间短路可检出；三个绕组都有供电通路且 U/V/W 三相齐全时，模型满足运转判定。仍未模拟实物电压、电流、电机相序、转向、转速、缺相时的实际转动、转矩、温升和热保护延时；这些需要明确器件参数、实验预期和模型边界后再排入实现。FR 的 TEST/RESET 目前只操作逻辑跳闸状态，不模拟真实热过载或旋钮整定值。
 
-The three-phase training supply and the motor load now run through the same simulation rules: phases stay independent, phase-to-phase shorts are reported, and a motor runs when every winding spans two different phases. Physical 24 V / 220 V values, motor direction and speed, reversal and reciprocation, heating, and timed thermal trips still require device parameters, expected results, and explicit model boundaries. FR TEST/RESET currently changes the logical trip state; real thermal overload and current-dial settings are not simulated.
+The three-phase training supply and motor use the same simulation rules: phases stay independent and phase-to-phase shorts are reported. The model's run criteria require supply paths through all windings and all three phases U, V and W. Physical voltage and current, phase sequence, direction and speed, behavior during phase loss, reversal and reciprocation, torque, heating, and timed thermal trips still require device parameters, expected results, and explicit model boundaries. FR TEST/RESET changes only the logical trip state; real thermal overload and current-dial settings are not simulated.

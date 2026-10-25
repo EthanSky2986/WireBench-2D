@@ -24,6 +24,8 @@ npm run build
 npm run preview
 ```
 
+Windows x64 release packaging uses the self-contained .NET 8 launcher. On Windows with the .NET 8 SDK installed, `npm run package:windows` builds the web app, embeds `dist/` in a single executable, and writes the versioned file to `artifacts/`. The launcher serves only on loopback and opens the default browser; it does not alter the simulation or project format.
+
 `dev` 启动仅监听本机的开发服务，访问终端实际显示的地址。`build` 先进行 TypeScript 检查，再生成 `dist/`。`preview` 用于检查已构建结果，不代替构建步骤。
 
 只运行相关测试时可使用：

@@ -83,7 +83,7 @@ export const DEVICE_MAP: Record<string, Device> = Object.fromEntries(
 
 /**
  * Five independent supply rails. L/N are the single-phase teaching control
- * supply; U/V/W are the three-phase main supply (380 V line-to-line). A rail is
+ * supply; U/V/W are the three independent three-phase main-supply rails. A rail is
  * identified by the exposed terminal that feeds it, so terminals never share a
  * label and two rails can only be joined by an actual wire or closed contact.
  */
@@ -172,27 +172,50 @@ export interface Load {
   to: string;
 }
 
+export type ControlLoad = Omit<Load, 'kind'> & { kind: 'coil' | 'lamp' };
+
+export interface MotorWinding extends Load {
+  id: string;
+  phase: Phase;
+}
+
 /**
  * One motor winding behaves as a load, never as a conductor. The star point of
  * a Y connection is therefore a node of its own, exactly as on a real terminal
  * box: the user decides Y or delta by wiring the six terminals.
  */
-export const MOTOR_WINDINGS: Load[] = [
-  ['U1', 'U2'],
-  ['V1', 'V2'],
-  ['W1', 'W2'],
-].map(([from, to]) => ({
-  deviceId: 'MOTOR',
-  kind: 'winding' as const,
-  from: `MOTOR:${from}`,
-  to: `MOTOR:${to}`,
-}));
+export const MOTOR_WINDINGS: MotorWinding[] = [
+  {
+    id: 'MOTOR:U',
+    phase: 'U',
+    deviceId: 'MOTOR',
+    kind: 'winding',
+    from: 'MOTOR:U1',
+    to: 'MOTOR:U2',
+  },
+  {
+    id: 'MOTOR:V',
+    phase: 'V',
+    deviceId: 'MOTOR',
+    kind: 'winding',
+    from: 'MOTOR:V1',
+    to: 'MOTOR:V2',
+  },
+  {
+    id: 'MOTOR:W',
+    phase: 'W',
+    deviceId: 'MOTOR',
+    kind: 'winding',
+    from: 'MOTOR:W1',
+    to: 'MOTOR:W2',
+  },
+];
 
 export const MOTOR_IDS = DEVICES.filter((device) => device.kind === 'motor').map(
   (device) => device.id,
 );
 
-export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
+export const LOADS: ControlLoad[] = DEVICES.flatMap((device): ControlLoad[] => {
   if (device.kind === 'contactor')
     return [{ deviceId: device.id, kind: 'coil', from: `${device.id}:A1`, to: `${device.id}:A2` }];
   if (device.kind === 'lamp')
@@ -200,23 +223,28 @@ export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
   return [];
 });
 
-/** Loads that the divider check must see: control loads plus the three motor windings. */
+/** All modeled loads, used by supply and series-network evaluation. */
 export const ALL_LOADS: Load[] = [...LOADS, ...MOTOR_WINDINGS];
 
-/**
- * One entry per device a learner can pick in the observation panel. A motor is
- * one device with three windings, so it is listed once, using its U1-U2 winding
- * only as the identity the trace resolver re-expands. `terminals` lists every
- * socket of the device so callers can rank how central a device is to a wiring.
- */
-export interface ObservableLoad extends Load {
+/** One entry per actual loadable device, independent of its internal loads. */
+export interface ObservableLoad {
+  deviceId: string;
+  kind: 'coil' | 'lamp' | 'motor';
   terminals: string[];
+  terminalPairs: [string, string][];
 }
 
 export const OBSERVABLE_LOADS: ObservableLoad[] = [
-  ...LOADS.map((load) => ({ ...load, terminals: [load.from, load.to] })),
-  ...MOTOR_WINDINGS.slice(0, 1).map((winding) => ({
-    ...winding,
-    terminals: [...new Set(MOTOR_WINDINGS.flatMap((entry) => [entry.from, entry.to]))],
+  ...LOADS.map((load): ObservableLoad => ({
+    deviceId: load.deviceId,
+    kind: load.kind,
+    terminals: [load.from, load.to],
+    terminalPairs: [[load.from, load.to]],
   })),
+  {
+    deviceId: 'MOTOR',
+    kind: 'motor',
+    terminals: [...new Set(MOTOR_WINDINGS.flatMap((entry) => [entry.from, entry.to]))],
+    terminalPairs: MOTOR_WINDINGS.map((winding): [string, string] => [winding.from, winding.to]),
+  },
 ];

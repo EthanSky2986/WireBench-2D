@@ -10,6 +10,7 @@ export interface Example {
 const RED = '#e35a64';
 const BLUE = '#4a85db';
 const YELLOW = '#dba536';
+const STAR_LINK = '#858b8d';
 /** Three-phase main conductors keep the usual brown/black/grey phase colours. */
 const PHASE_COLORS: Record<string, string> = {
   'POWER:U2': '#a1583f',
@@ -90,7 +91,7 @@ export const EXAMPLES: Example[] = [
     id: 'motor-self-hold',
     name: '接触器自锁 + 电机',
     description:
-      'SB2 启动，KM1 自锁，三相主回路经 KM1 主触点给电机供电，电机运转；SB1 断开控制回路，KM1 释放，电机停止。U2/V2/W2 已短接成星点，即 Y 接法；改成 Δ 可自行拆掉星点并交叉连线。',
+      'SB2 启动，KM1 自锁，三相主回路经 KM1 主触点给电机供电，模型显示满足三相运转条件；SB1 断开控制回路，KM1 释放，模型撤销运转状态。U2/V2/W2 已短接成星点，即 Y 接法；改成 Δ 可自行拆掉星点并交叉连线。',
     wires: wires('motor', [
       // Control circuit: stop, start, self-holding contact, coil return.
       ['POWER:L', 'SB1:NC1'],
@@ -108,8 +109,8 @@ export const EXAMPLES: Example[] = [
       ['POWER:W2', 'KM1:L3', PHASE_COLORS['POWER:W2']],
       ['KM1:T3', 'MOTOR:W1', PHASE_COLORS['POWER:W2']],
       // Y connection: the user wires the star point on the terminal box.
-      ['MOTOR:U2', 'MOTOR:V2', PHASE_COLORS['POWER:U2']],
-      ['MOTOR:V2', 'MOTOR:W2', PHASE_COLORS['POWER:V2']],
+      ['MOTOR:U2', 'MOTOR:V2', STAR_LINK],
+      ['MOTOR:V2', 'MOTOR:W2', STAR_LINK],
     ]),
   },
 ];
