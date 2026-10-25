@@ -6,6 +6,7 @@ import { readStoredProject, saveStoredProject, type ProjectStorage } from '../st
 import { en } from './messages.en';
 import { zh } from './messages.zh';
 import { localizeFault, localizeProjectError, localizeStorageError } from './messages';
+import { translate } from './catalog';
 
 const wires = (...pairs: [string, string][]): Wire[] =>
   pairs.map(([from, to], index) => ({ id: `w${index}`, from, to, color: '#fff' }));
@@ -32,12 +33,12 @@ describe('localized domain messages', () => {
 
   it.each([
     ['message.fault.short', wires(['POWER:L', 'POWER:N'])],
+    ['message.fault.unsupported-supply', wires(['POWER:U2', 'HL1:1'], ['HL1:2', 'POWER:V2'])],
     ['message.fault.series', wires(['POWER:L', 'HL1:1'], ['HL1:2', 'HL2:1'], ['HL2:2', 'POWER:N'])],
     [
       'message.fault.unstable',
       wires(['POWER:L', 'KM1:61'], ['KM1:62', 'KM1:A1'], ['KM1:A2', 'POWER:N']),
     ],
-    ['message.fault.reserved', wires(['POWER:U2', 'KM1:L1'])],
     ['message.fault.unknown-terminal', wires(['POWER:L', 'MISSING:1'])],
   ])('formats %s in either language without changing the electrical result', (code, circuit) => {
     const result = simulate(circuit, {}, true);
@@ -47,6 +48,26 @@ describe('localized domain messages', () => {
     expect(localizeFault(fault, 'zh-CN')).toBe(fault.message);
     expect(localizeFault(fault, 'en')).not.toMatch(/[\u3400-\u9fff]|\{\w+\}/);
     expect(JSON.stringify(result)).toBe(original);
+  });
+
+  it('explains an undefined motor star-point reference without stopping the whole simulation', () => {
+    const state = simulate(
+      wires(
+        ['POWER:U2', 'MOTOR:U1'],
+        ['POWER:V2', 'MOTOR:V1'],
+        ['POWER:W2', 'MOTOR:W1'],
+        ['MOTOR:U2', 'MOTOR:V2'],
+        ['MOTOR:V2', 'MOTOR:W2'],
+        ['MOTOR:W2', 'POWER:N'],
+      ),
+      {},
+      true,
+    );
+    expect(state.fault).toBeNull();
+    expect(state.motors.MOTOR).toBe(false);
+    expect(state.motorEvaluations.MOTOR.problem).toBe('undefined-star-rail');
+    expect(translate('zh-CN', 'learning.motorProblem.undefined-star-rail')).toContain('未定义');
+    expect(translate('en', 'learning.motorProblem.undefined-star-rail')).toContain('undefined');
   });
 
   it('translates nested validation subjects and retains wire indexes', () => {

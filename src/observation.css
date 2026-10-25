@@ -102,6 +102,17 @@
   color: var(--accent-text);
 }
 
+.observation-result.is-partial,
+.observation-result.is-energized-not-running {
+  border-color: var(--warning-border);
+  background: var(--warning-soft);
+}
+
+.observation-result.is-partial > strong,
+.observation-result.is-energized-not-running > strong {
+  color: var(--warning-text);
+}
+
 .observation-result.is-fault {
   color: var(--danger);
   border-color: var(--danger-border);
@@ -132,6 +143,29 @@
 
 .observation-ends span {
   color: var(--text-secondary);
+}
+
+.observation-windings {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.observation-windings h3 {
+  margin: 0;
+}
+
+.observation-windings > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.observation-windings span {
+  color: var(--text-secondary);
+  text-align: right;
 }
 
 .observation-panel code {

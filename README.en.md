@@ -4,14 +4,15 @@
 
 A two-dimensional electrical training bench in your browser. Device leads are already connected to terminal strips. Draw wires between terminals, operate buttons and switches, and watch contactors and indicator lamps respond to the circuit you build.
 
-**Open-source teaching preview: [v0.2.0-alpha](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.2.0-alpha) (2026-10-04).** Code uses the MIT license; the public repository excludes original reference images. The current model supports basic control-circuit practice; it does not calculate physical voltage, current, or motor motion.
+**Teaching release 0.3.0: [v0.3.0](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.3.0) (2026-10-25).** Code uses the MIT license; the public repository excludes original reference images. The model supports basic control-circuit practice and three-phase motor wiring topology; it does not calculate physical voltage, current, or motor motion.
 
-![Refined workbench: protection test in English, light theme](docs/screenshots/lamp-panel-light-trip.png)
+![0.3.0 workbench: self-holding contactor and three-phase motor running, light theme](docs/screenshots/wirebench-0.3.0-motor-running.png)
 
 ## Features
 
 - 16 device definitions and 113 selectable terminals; refined artwork throughout the main bench and device inspector. Three lamps share a vertical panel and six-position terminal bank; SB controls align with their terminal groups.
-- Three editable examples: button-controlled lamp, contactor jogging, and self-holding start/stop. An empty workspace supports independent wiring.
+- Four editable examples: button-controlled lamp, contactor jogging, self-holding start/stop, and self-holding contactor plus motor. An empty workspace supports independent wiring.
+- A three-phase teaching supply and motor terminal box can be wired directly. The model checks the actual winding topology, defined supply relationships, and the presence of U/V/W before marking a Y or delta arrangement as meeting its run criteria; unsupported and undefined relationships are reported explicitly.
 - Wire drawing, selection, colors, draggable bends, deletion, undo, and redo. New routes seek separate lanes; older routes can be arranged explicitly. Cycle overlapping wires; the selected wire stays clear with A/B endpoint marks.
 - Optional **Step observation**: press and release buttons separately, review action snapshots and state changes, and keep tracing the supply and return paths of a chosen coil or lamp.
 - Short-circuit and unstable-circuit messages, overload relay tests, emergency stop, and normally open/closed contact behavior.
@@ -22,7 +23,9 @@ No account or backend is required. Installing dependencies needs internet access
 
 ## Run locally
 
-Download and extract the source from the [v0.2.0-alpha release page](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.2.0-alpha), or clone the repository. The application is available for local use after download; there is no hosted online demo.
+Download and extract the source from the [v0.3.0 release page](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.3.0), or clone the repository. The application is available for local use after download; there is no hosted online demo.
+
+Windows x64 users can download `WireBench-0.3.0-win-x64.exe` from the release page. Double-clicking it starts a local server and opens the default browser. The launcher listens only on `127.0.0.1:48173`; close its console window to stop the server. It does not require Node.js and is not an embedded desktop browser. The unsigned Windows file may trigger a SmartScreen warning; obtain it from the GitHub release page.
 
 Install Node.js **22.12+** and npm; Node.js **24 LTS** is recommended. In the project directory:
 
@@ -43,6 +46,8 @@ On macOS, you can also double-click **启动实验台.command**. If macOS does n
 4. Press **SB1** to stop, or click **E-STOP** to latch the emergency stop. Click it again to reset; resetting alone does not restart the circuit.
 5. Start again, then click **FR1’s TEST** to test a trip: the contactor releases and the red lamp lights. Click **RESET** to reset it; clicking the relay body only shows its details.
 6. Select **Exit experiment** to restore the workspace you had before entering the example.
+
+To observe the motor, select **Self-holding contactor + motor** and press and release SB2. The terminal box shows the model's running state only when all three windings have a defined supply path and U/V/W are all present. This is not a measured speed.
 
 Examples contain ordinary wire data rather than preset simulation results. Turn off power, remove a necessary wire, and power on again: the result changes with the actual circuit.
 
@@ -88,16 +93,17 @@ Export has been verified locally to download an actual file with the correct nam
 
 ## Model scope and known limitations
 
-Devices include KM1–KM3 with LANN22 auxiliary contacts, FR1–FR2, SQ1–SQ2, SB1–SB3, an emergency stop, HL1–HL3, a teaching supply, and a reserved motor terminal area.
+Devices include KM1–KM3 with LANN22 auxiliary contacts, FR1–FR2, SQ1–SQ2, SB1–SB3, an emergency stop, HL1–HL3, a single-phase control supply, a three-phase teaching supply, and a three-phase motor terminal box.
 
-| Supported                                                                                                 | Not simulated or not yet verified                                                                                   |
-| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Ideal normally open/closed contacts, jogging, self-holding, stop circuits, and independent parallel loads | Physical voltage, current, coil ratings, frequency, and pickup thresholds                                           |
-| Emergency stop when wired into a circuit; FR tests switch auxiliary contacts                              | Three-phase power and motor motion, voltage division across series loads, temperature rise, and thermal trip timing |
-| Explicit short-circuit, unstable-circuit, and unsupported-arrangement messages                            | Real terminal wire capacity and engineering validation of physical wiring                                           |
-| Core desktop-browser interactions tested locally                                                          | Full cross-browser coverage, touch/mobile use, and performance with 500 wires                                       |
+| Supported                                                                                                                                                            | Not simulated or not yet verified                                             |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Ideal normally open/closed contacts, jogging, self-holding, stop circuits, and independent parallel loads                                                            | Physical voltage, current, coil ratings, frequency, and pickup thresholds     |
+| Emergency stop when wired into a circuit; FR tests switch auxiliary contacts                                                                                         | Motor direction, speed and torque; temperature rise and thermal trip timing   |
+| Three-phase supply and phase-to-phase short localization; the motor meets modeled run criteria only with defined supply paths through all windings and U/V/W present | Voltage division across series loads, current settings, and real trip curves  |
+| Explicit short-circuit, unstable-circuit, and unsupported-arrangement messages                                                                                       | Real terminal wire capacity and engineering validation of physical wiring     |
+| Core desktop-browser interactions tested locally                                                                                                                     | Full cross-browser coverage, touch/mobile use, and performance with 500 wires |
 
-`POWER:L/N` represents logical supply rails. An FR test does not directly open its three-phase through paths; the emergency stop is not a global power switch. Unsupported arrangements produce a message; simulation results do not establish that physical wiring is safe.
+`POWER:L/N` and `POWER:U2/V2/W2` describe connectivity only: L/N is the single-phase control supply and U/V/W are three independent phase rails for the teaching circuit. They do not assume a physical voltage or measured current. The model's run criteria require supply paths through all three windings and all three phases U, V and W. Y and delta are wired by the user and are not modelled separately. Phase sequence, direction, speed, and a real motor's behavior, temperature, or torque during phase loss are not simulated. An FR test does not directly open its three-phase through paths; the emergency stop is not a global power switch. Unsupported arrangements produce a message; simulation results do not establish that physical wiring is safe.
 
 Refined devices are in the main bench. **Rounded wires remain exclusive to the material study.** Open it through the sidebar or `/?preview=materials` after starting the app. The study runs independently without reading or writing your workspace. New main-bench wires seek clear lanes around devices and other wires, then keep their saved route. Opening older files does not move their wires. Dense wiring can still have crossings or short shared runs; see the [visual guidelines](docs/VISUAL_STYLE.md).
 
@@ -120,7 +126,7 @@ Detailed architecture and development documents are currently in Chinese. The co
 
 ## Repository and licensing status
 
-The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v0.2.0-alpha` teaching preview. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
+The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v0.3.0` teaching release. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
 
 An independent classroom trial by a teacher or student remains pending. Follow the example steps above and report reproducible feedback; the current scope and limitations are described above.
 

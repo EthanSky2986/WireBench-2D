@@ -1,5 +1,32 @@
 # Changelog / 变更记录
 
+## v0.3.0 — 2026-10-25
+
+### Added / 新增
+
+- 三相教学电源进入仿真：U2/V2/W2 是三条互相独立的相线，可与单相控制电源 L/N 一起接线。故障检测扩展到相间短路（U–V/U–W/V–W）、相线与控制 N 直接连接，以及两套电源混接，并沿用原有故障结构给出涉及端子和导线。模型不定义两套电源是否共用中性点，因此此反馈不据此判断实物短路。
+- 电机负载：U1–U2、V1–V2、W1–W2 作为三个绕组参与计算。Y 与 Δ 不单独建模，由用户按实训台方式自己连线；三个绕组都有模型供电通路且 U/V/W 三相齐全时满足运转判定。单一相接入浮置星点不会被判作绕组得电。接线盒风扇动画跟随模型判定；不表示真实转子状态，缺相运行、惯性和热效应不在模型范围内。
+- 新示例「接触器自锁 + 电机」：单相控制回路上 SB2 启动、KM1 经 13–14 自锁、SB1 停止，三相主回路经 KM1 主触点给 Y 接法的电机供电。示例与自由接线使用同一套仿真规则，不硬编码结果。
+- 此前声明为预留的 `POWER:U2/V2/W2` 与 `MOTOR:*` 端子全部可接线，预留端子提示随之移除。
+- 教学电源与接线盒按实物重画：三相电机有蓝色机座、散热筋、铭牌、顶部黑色接线盒和带散热槽的风罩，运转时风罩内风扇持续旋转（尊重 `prefers-reduced-motion`），旁侧还带运转指示灯。
+- 通电反馈扩到三相：实验台端子和导线按母线着色（L/N 之外，U/V/W 各有独立颜色），三相主回路即使经过接触器主触点仍能一眼追踪相序。
+- 分步观察可以选电机，一次说明三个绕组；部分绕组有模型供电通路时列出对应支路，便于排查缺相、KM 主触点或星点连线。
+- Windows 提供单文件启动器：内置构建后的网页资源，在本机回环地址启动服务并打开默认浏览器，不要求安装 Node.js，也不封装桌面 WebView。
+- 器件绘制细节提升：接触器铭牌回到模制面内并重排辅助触点，热继电器增加刻度盘高光与跳闸指示灯，按钮/指示灯改为带四角螺钉的沉台面板，熄灭的灯罩透出本色而不是黑洞，各器件加落地阴影。
+- 固定引出线改为沿线槽正交走线并绘制带齿线槽本体；原先的弧形走线在适配缩放下互相交叉，读起来像噪声。暗色主题下同样可辨。
+
+English (panel detail): Contactor silkscreen stays inside the moulding with the LANN22 blocks split left and right, the thermal relay gains a raised dial and a trip lamp, pushbuttons and lamps sit on a recessed four-screw bezel, an unlit lens shows its colour, every device casts a contact shadow, and fixed leads now run orthogonally through a drawn wiring duct instead of crossing as arcs. Rail wording in the observation panel names supply rails rather than L/N only.
+
+English (motor presentation): The motor is redrawn from the bench machine — blue finned housing, nameplate, top terminal box and a slotted fan cowl whose blades animate when the model's run criteria are met, with a reduced-motion opt-out and a status indicator. Terminal and wire feedback now covers all five rails, so U/V/W stay traceable after the contactor main contacts. The observation panel can select the motor and explains all three windings without claiming real rotor behavior during phase loss.
+
+English: The three-phase training supply is now simulated. U2/V2/W2 are three independent phase lines that can be wired alongside the single-phase L/N control supply. Fault reporting covers phase-to-phase shorts, direct connections from a phase to control N, and mixed-supply connections while keeping the existing fault structure. Because the model does not define whether the supplies share a neutral reference, this feedback does not claim that a phase-to-N connection is physically a short. The motor terminal box carries three winding loads: Y and delta are not modelled separately but wired by the user as on a real bench. The model's run criteria require supply paths through all windings and all three phases; a single phase tied to a floating star point does not count as winding supply. A reduced-motion-aware fan animation follows this model classification, not physical rotor motion. Phase sequence, actual behavior under phase loss, inertia, temperature and torque are not modeled. A new "self-holding contactor + motor" example combines the single-phase control circuit with a three-phase main circuit through the same rules. All previously reserved terminals can now be wired, so the reserved-terminal notices are gone.
+
+### Scope / 边界
+
+- 仍为理想通断模型：电机状态表示接线拓扑满足模型的三相运转判定，不是对真实旋转磁场或转子状态的测量；相序、转向、转速、缺相运行、转矩、温升、实物电压与真实电流均未建模。热继电器跳闸仍不直接断开三相主通路。
+
+English: The simulator remains an ideal switching model. The motor status reports whether its wiring meets the model's three-phase run criteria; it is not a measurement of a rotating field or rotor state. Phase sequence, direction, speed, behavior during phase loss, torque, temperature, physical voltage and real current are not modelled. A thermal trip still does not physically open the three-phase main paths.
+
 ## v0.2.0-alpha — 2026-10-04
 
 ### Added / 新增

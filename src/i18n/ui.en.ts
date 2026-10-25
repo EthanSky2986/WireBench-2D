@@ -44,6 +44,10 @@ export const en = {
   'ui.example.self-hold.subtitle': 'Start · Hold · Stop',
   'ui.example.self-hold.description':
     'SB2 starts and latches KM1; HL2 indicates operation. SB1, the emergency stop, or the FR1 test opens the coil circuit. HL1 indicates standby; HL3 indicates an FR1 trip.',
+  'ui.example.motor-self-hold.name': 'Self-holding contactor + motor',
+  'ui.example.motor-self-hold.subtitle': 'Three-phase main circuit · Y',
+  'ui.example.motor-self-hold.description':
+    'SB2 starts and latches KM1, whose main contacts feed the motor; the model indicates its three-phase run criteria are met. SB1 opens the control circuit and KM1 releases, so the model clears that run indication. U2/V2/W2 are already shorted into a star point (Y); rewire them into a delta to compare.',
   'ui.heading.tagline': 'Wire the circuit. See how it works.',
   'ui.heading.running': 'Simulation',
   'ui.heading.editing': 'Wiring',
@@ -163,7 +167,7 @@ export const en = {
   'ui.guide.delete': 'Delete selected wire',
   'ui.guide.exitFullscreen': 'Exit full screen',
   'ui.guide.boundaries':
-    'This version uses a logical L/N teaching supply without numerical voltage or current. Three-phase circuits, motor operation, and voltage division across series loads are not simulated. Lamps and contactors operate only when wired correctly.',
+    'This version uses logical L/N control rails and three independent phase rails. It models ideal contact switching and a three-winding motor state without physical voltage, current, speed, or direction. Lamps, contactors, and the motor operate only when wired correctly.',
   'ui.guide.start': 'Start experimenting',
   'ui.reset.label': 'Reset',
   'ui.reset.state': 'Reset operating state',

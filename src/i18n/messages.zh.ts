@@ -1,12 +1,18 @@
 export const zh = {
   'message.fault.short':
     '控制电源 L 与 N 被导线或闭合触点直接接通，发生短路。请断电检查标出的线路。',
+  'message.fault.phase-short':
+    '三相电源 {phases} 两相被导线或闭合触点直接接通，发生相间短路。请断电检查标出的线路。',
+  'message.fault.phase-neutral':
+    '三相电源 {phase} 相与控制电源 N 被导线或闭合触点直接接通。模型未定义两套电源是否共用中性点，因此按供电接线故障停止仿真；请核对实际电源关系和标出的线路。',
+  'message.fault.supply-mix':
+    '控制电源 L 与三相电源 {phase} 相被直接接通。模型未定义两套电源的共同参考点，无法判断混接后的实物电气结果，因此停止仿真；请按实际电源关系核对接线。',
+  'message.fault.unsupported-supply':
+    '{devices} 被直接接在教学电源母线 {rails} 之间；当前模型只支持控制电源 L/N 上的线圈和指示灯。请检查负载接法。',
   'message.fault.series':
     '{devices} 构成负载串联或分压网络；首版只计算独立跨接控制电源的负载，请改用并联支路。',
   'message.fault.unknown-terminal':
     '接线文件包含无法识别的端子，不能进行仿真。请检查或删除标出的线路。',
-  'message.fault.reserved':
-    '三相电源与电机端子为预留区域，首版暂不计算这类接法。控制实验请使用 POWER:L / POWER:N。',
   'message.fault.unstable':
     '{devices} 出现反复吸合与释放，回路无法稳定。请检查线圈与自身常闭触点或互相控制的接法。',
   'message.project.invalid-object': '{subject}格式不正确。',

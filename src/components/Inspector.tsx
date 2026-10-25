@@ -67,7 +67,12 @@ export default function Inspector({
   const active = device
     ? device.kind === 'supply'
       ? powered
-      : !!(result.coils[device.id] || result.lamps[device.id] || inputs[device.id])
+      : !!(
+          result.coils[device.id] ||
+          result.lamps[device.id] ||
+          result.motors[device.id] ||
+          inputs[device.id]
+        )
     : false;
   const buttonId = !stepMode && !wire && device?.kind === 'button' ? device.id : null;
 
@@ -163,8 +168,12 @@ export default function Inspector({
         <>
           <div className={`device-preview ${active ? 'active' : ''}`}>
             <div className="preview-grid" />
-            <svg viewBox="0 0 180 175" role="img" aria-label={deviceName}>
-              <g transform="translate(10 6)">
+            <svg
+              viewBox={device.kind === 'motor' ? '0 12 160 140' : '0 0 180 175'}
+              role="img"
+              aria-label={deviceName}
+            >
+              <g transform={device.kind === 'motor' ? undefined : 'translate(10 6)'}>
                 <RefinedDeviceArt
                   kind={device.kind}
                   id={device.id}
@@ -191,7 +200,9 @@ export default function Inspector({
                       ? t('inspector.tripped')
                       : t('inspector.normal')
                     : device.kind === 'motor'
-                      ? t('inspector.reserved')
+                      ? active
+                        ? t('inspector.motorRunning')
+                        : t('inspector.motorStopped')
                       : device.kind === 'supply'
                         ? powered
                           ? t('inspector.powered')

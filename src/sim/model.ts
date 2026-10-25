@@ -70,16 +70,40 @@ export const DEVICES: Device[] = [
   })),
   {
     id: 'MOTOR',
-    name: '电机接线区 · 预留',
+    name: '三相异步电机接线盒',
     kind: 'motor',
     terminals: ['U1', 'V1', 'W1', 'U2', 'V2', 'W2'],
   },
-  { id: 'POWER', name: '教学控制电源', kind: 'supply', terminals: ['U2', 'V2', 'W2', 'L', 'N'] },
+  { id: 'POWER', name: '教学电源', kind: 'supply', terminals: ['U2', 'V2', 'W2', 'L', 'N'] },
 ];
 
 export const DEVICE_MAP: Record<string, Device> = Object.fromEntries(
   DEVICES.map((device) => [device.id, device]),
 );
+
+/**
+ * Five independent supply rails. L/N are the single-phase teaching control
+ * supply; U/V/W are the three independent three-phase main-supply rails. A rail is
+ * identified by the exposed terminal that feeds it, so terminals never share a
+ * label and two rails can only be joined by an actual wire or closed contact.
+ */
+export const SUPPLY_RAILS = {
+  L: 'POWER:L',
+  N: 'POWER:N',
+  U: 'POWER:U2',
+  V: 'POWER:V2',
+  W: 'POWER:W2',
+} as const;
+
+export type Rail = keyof typeof SUPPLY_RAILS;
+export const RAIL_IDS = Object.keys(SUPPLY_RAILS) as Rail[];
+
+export const PHASES = ['U', 'V', 'W'] as const;
+export type Phase = (typeof PHASES)[number];
+
+export function isPhase(rail: Rail): rail is Phase {
+  return rail === 'U' || rail === 'V' || rail === 'W';
+}
 export const TERMINAL_IDS: string[] = DEVICES.flatMap((device) =>
   device.terminals.map((label) => `${device.id}:${label}`),
 );
@@ -143,12 +167,55 @@ export const CONTACTS: Contact[] = DEVICES.flatMap((device) => {
 
 export interface Load {
   deviceId: string;
-  kind: 'coil' | 'lamp';
+  kind: 'coil' | 'lamp' | 'winding';
   from: string;
   to: string;
 }
 
-export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
+export type ControlLoad = Omit<Load, 'kind'> & { kind: 'coil' | 'lamp' };
+
+export interface MotorWinding extends Load {
+  id: string;
+  phase: Phase;
+}
+
+/**
+ * One motor winding behaves as a load, never as a conductor. The star point of
+ * a Y connection is therefore a node of its own, exactly as on a real terminal
+ * box: the user decides Y or delta by wiring the six terminals.
+ */
+export const MOTOR_WINDINGS: MotorWinding[] = [
+  {
+    id: 'MOTOR:U',
+    phase: 'U',
+    deviceId: 'MOTOR',
+    kind: 'winding',
+    from: 'MOTOR:U1',
+    to: 'MOTOR:U2',
+  },
+  {
+    id: 'MOTOR:V',
+    phase: 'V',
+    deviceId: 'MOTOR',
+    kind: 'winding',
+    from: 'MOTOR:V1',
+    to: 'MOTOR:V2',
+  },
+  {
+    id: 'MOTOR:W',
+    phase: 'W',
+    deviceId: 'MOTOR',
+    kind: 'winding',
+    from: 'MOTOR:W1',
+    to: 'MOTOR:W2',
+  },
+];
+
+export const MOTOR_IDS = DEVICES.filter((device) => device.kind === 'motor').map(
+  (device) => device.id,
+);
+
+export const LOADS: ControlLoad[] = DEVICES.flatMap((device): ControlLoad[] => {
   if (device.kind === 'contactor')
     return [{ deviceId: device.id, kind: 'coil', from: `${device.id}:A1`, to: `${device.id}:A2` }];
   if (device.kind === 'lamp')
@@ -156,9 +223,28 @@ export const LOADS: Load[] = DEVICES.flatMap((device): Load[] => {
   return [];
 });
 
-export const UNSUPPORTED_TERMINALS = new Set([
-  'POWER:U2',
-  'POWER:V2',
-  'POWER:W2',
-  ...DEVICE_MAP.MOTOR.terminals.map((label) => `MOTOR:${label}`),
-]);
+/** All modeled loads, used by supply and series-network evaluation. */
+export const ALL_LOADS: Load[] = [...LOADS, ...MOTOR_WINDINGS];
+
+/** One entry per actual loadable device, independent of its internal loads. */
+export interface ObservableLoad {
+  deviceId: string;
+  kind: 'coil' | 'lamp' | 'motor';
+  terminals: string[];
+  terminalPairs: [string, string][];
+}
+
+export const OBSERVABLE_LOADS: ObservableLoad[] = [
+  ...LOADS.map((load): ObservableLoad => ({
+    deviceId: load.deviceId,
+    kind: load.kind,
+    terminals: [load.from, load.to],
+    terminalPairs: [[load.from, load.to]],
+  })),
+  {
+    deviceId: 'MOTOR',
+    kind: 'motor',
+    terminals: [...new Set(MOTOR_WINDINGS.flatMap((entry) => [entry.from, entry.to]))],
+    terminalPairs: MOTOR_WINDINGS.map((winding): [string, string] => [winding.from, winding.to]),
+  },
+];

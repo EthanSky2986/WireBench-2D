@@ -23,6 +23,9 @@
   --danger: #b25343;
   --danger-soft: #fbefea;
   --danger-border: #e5c9ba;
+  --warning-text: #805d18;
+  --warning-soft: #faf2dc;
+  --warning-border: #e4d19c;
   --shadow: 0 8px 24px #203b3226;
   --shadow-color: #31482c25;
   --inset-shadow: #768e6c33;
@@ -38,6 +41,16 @@
   --board-text-primary: #60725d;
   --board-text-secondary: #798777;
   --board-text-muted: #75816f;
+  --device-shadow: #1c2a24;
+  --socket-idle: #697e70;
+  --socket-idle-stroke: #a7b5ab;
+  --socket-live-stroke: #0d1a12;
+  --socket-selected: #d5f1e5;
+  --socket-selected-stroke: #127659;
+  --socket-selected-core: #16785c;
+  --socket-connected-core: #cedccc;
+  --socket-idle-core: #233c31;
+  --socket-center-highlight: #e6ede2;
   --canvas-pattern: #b9c5bf;
   --rail-top: #d0d4c6;
   --rail-mid: #f2f2e7;
@@ -45,10 +58,20 @@
   --rail-highlight: #f8f9ef;
   --fixed-wire: #96a298;
   --fixed-wire-power: #949f76;
+  --duct-body: #cfd6cc;
+  --duct-edge: #a9b4a9;
+  --duct-tooth: #8d9b90;
   --wire-halo: #f0f2e9;
   --wire-selection: #086e80;
   --learning-trace: #8355bb;
   --on-wire-selection: #ffffff;
+  /* Energized supply rails. Phases keep the usual brown/black/grey order of a
+     three-phase main circuit so a live U/V/W terminal is distinguishable. */
+  --rail-live-l: #dea947;
+  --rail-live-n: #4a85db;
+  --rail-live-u: #b2643f;
+  --rail-live-v: #4d5457;
+  --rail-live-w: #8a7a3f;
   /* Terminal plastic stays pale in both themes, so its focus ring stays dark. */
   --terminal-focus: #126546;
 }
@@ -81,6 +104,9 @@
   --danger: #efac8e;
   --danger-soft: #422f25;
   --danger-border: #73513d;
+  --warning-text: #e4c979;
+  --warning-soft: #433d2b;
+  --warning-border: #72623d;
   --shadow: 0 8px 24px #00000050;
   --shadow-color: #00000050;
   --inset-shadow: #080f1466;
@@ -93,6 +119,16 @@
   --board-text-primary: #d3dde2;
   --board-text-secondary: #b1c0c8;
   --board-text-muted: #9eafb9;
+  --device-shadow: #050a0d;
+  --socket-idle: #667985;
+  --socket-idle-stroke: #a1b2bb;
+  --socket-live-stroke: #091116;
+  --socket-selected: #b7e8d0;
+  --socket-selected-stroke: #2c7453;
+  --socket-selected-core: #146444;
+  --socket-connected-core: #c3d1d7;
+  --socket-idle-core: #1f2d34;
+  --socket-center-highlight: #e6ede2;
   --canvas-pattern: #506570;
   --rail-top: #67727b;
   --rail-mid: #a2adb4;
@@ -100,7 +136,15 @@
   --rail-highlight: #bfccd4;
   --fixed-wire: #82949f;
   --fixed-wire-power: #9ea89b;
+  --duct-body: #3a4a52;
+  --duct-edge: #55676f;
+  --duct-tooth: #6c7f87;
   --wire-halo: #9baeb9;
   --wire-selection: #7fddf3;
   --on-wire-selection: #112e39;
+  --rail-live-l: #f0c25e;
+  --rail-live-n: #7fa8dd;
+  --rail-live-u: #d68a63;
+  --rail-live-v: #97a2a8;
+  --rail-live-w: #c8b568;
 }

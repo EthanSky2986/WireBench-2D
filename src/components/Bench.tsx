@@ -14,12 +14,14 @@ import {
   polyline,
   clampPoint,
   fixedLeadPath,
+  DUCT_ROWS,
   localizeDevice,
 } from '../layout';
 import type { Point } from '../layout';
-import { DEVICE_MAP, UNSUPPORTED_TERMINALS } from '../sim/model';
+import { DEVICE_MAP } from '../sim/model';
 import type { Wire } from '../sim/model';
 import type { SimulationResult } from '../sim/engine';
+import { hasSupplyPath } from '../sim/loadTrace';
 import type { LoadTrace } from '../sim/loadTrace';
 import { RefinedDeviceArt } from './RefinedDeviceArt';
 import { TerminalStripArt } from './TerminalStripArt';
@@ -64,6 +66,15 @@ interface WireVisualProps {
   live: boolean;
   traced?: boolean;
 }
+
+/** Live-rail colours reused by terminal dots and wire shading; see tokens.css. */
+const RAIL_COLORS: Record<string, string | undefined> = {
+  L: 'var(--rail-live-l)',
+  N: 'var(--rail-live-n)',
+  U: 'var(--rail-live-u)',
+  V: 'var(--rail-live-v)',
+  W: 'var(--rail-live-w)',
+};
 
 function WireVisual({ points, color, selected, fault, live, traced }: WireVisualProps) {
   const route = polyline(points);
@@ -128,7 +139,7 @@ export default function Bench(p: Props) {
   const maskPrefix = useId();
   const traceWires = useMemo(() => new Set(p.trace?.wireIds), [p.trace]);
   const traceTerminals = useMemo(() => new Set(p.trace?.terminalIds), [p.trace]);
-  const hasTrace = p.trace?.status === 'energized';
+  const hasTrace = !!p.trace && hasSupplyPath(p.trace.status);
   const host = useRef<HTMLDivElement>(null),
     svg = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ w: 1000, h: 720 }),
@@ -481,6 +492,37 @@ export default function Bench(p: Props) {
             fill="var(--board-panel-bg)"
             stroke="var(--board-border)"
           />
+          {/* Wiring duct under each strip group: leads drop into the channel and
+              leave at the device, which is how a training panel is dressed. */}
+          {p.fixed &&
+            DUCT_ROWS.map((row) => (
+              <g
+                key={`duct-${row.deviceId}-${row.side}`}
+                className="wiring-duct"
+                pointerEvents="none"
+                aria-hidden="true"
+              >
+                <rect
+                  x={row.from - 4}
+                  y={row.y - 3.4}
+                  width={row.to - row.from + 8}
+                  height="6.8"
+                  rx="1.6"
+                  fill="var(--duct-body)"
+                  stroke="var(--duct-edge)"
+                  strokeWidth="0.7"
+                />
+                {Array.from({ length: Math.floor((row.to - row.from) / 6) }, (_, i) => (
+                  <path
+                    key={i}
+                    d={`M ${row.from + i * 6 + 2} ${row.y - 3.4} V ${row.y + 3.4}`}
+                    stroke="var(--duct-tooth)"
+                    strokeWidth="0.6"
+                    opacity="0.55"
+                  />
+                ))}
+              </g>
+            ))}
           {p.fixed &&
             strips.map((s, si) => {
               const part = placements.find((x) => x.id === s.deviceId)!;
@@ -513,10 +555,28 @@ export default function Bench(p: Props) {
               active =
                 d.kind === 'supply'
                   ? p.powered
-                  : !!(p.result.coils[d.id] || p.result.lamps[d.id] || p.inputs[d.id]),
+                  : !!(
+                      p.result.coils[d.id] ||
+                      p.result.lamps[d.id] ||
+                      p.result.motors[d.id] ||
+                      p.inputs[d.id]
+                    ),
               operable = ['button', 'limit', 'estop'].includes(d.kind);
             return (
               <g key={d.id}>
+                {/* Contact shadow: the device body rests on the rail rather than
+                    floating on the plate. Drawn from the placement box so it
+                    follows every artwork change. */}
+                <ellipse
+                  cx={part.x + part.size / 2}
+                  cy={part.y + part.size * 0.94}
+                  rx={part.size * 0.4}
+                  ry={part.size * 0.055}
+                  fill="var(--device-shadow)"
+                  opacity="0.16"
+                  pointerEvents="none"
+                  aria-hidden="true"
+                />
                 <text
                   x={part.labelX}
                   y={part.labelY}
@@ -665,7 +725,7 @@ export default function Bench(p: Props) {
                     </text>
                   </>
                 )}
-                {d.kind === 'contactor' && (
+                {(d.kind === 'contactor' || d.kind === 'motor') && (
                   <g transform={`translate(${part.labelX - 40} ${part.y + part.size + 9})`}>
                     <circle
                       cx="0"
@@ -674,7 +734,13 @@ export default function Bench(p: Props) {
                       fill={active ? 'var(--accent)' : 'var(--board-text-muted)'}
                     />
                     <text x="11" y="5" className={`state-label ${active ? 'on' : ''}`}>
-                      {active ? t('bench.coilOn') : t('bench.coilOff')}
+                      {d.kind === 'contactor'
+                        ? active
+                          ? t('bench.coilOn')
+                          : t('bench.coilOff')
+                        : active
+                          ? t('bench.motorRunning')
+                          : t('bench.motorStopped')}
                     </text>
                   </g>
                 )}
@@ -724,7 +790,10 @@ export default function Bench(p: Props) {
             const points = w.points,
               selected = p.selectedWire === w.id,
               fault = highlighted.has(w.id),
-              live = p.powered && !p.result.fault && p.result.potential[w.from] === 'L';
+              live =
+                p.powered &&
+                !p.result.fault &&
+                RAIL_COLORS[p.result.potential[w.from]] !== undefined;
             return (
               <g
                 key={w.id}
@@ -796,7 +865,7 @@ export default function Bench(p: Props) {
                   !hasTrace &&
                   p.powered &&
                   !p.result.fault &&
-                  p.result.potential[selectedWire.from] === 'L'
+                  RAIL_COLORS[p.result.potential[selectedWire.from]] !== undefined
                 }
                 traced={traceWires.has(selectedWire.id)}
               />
@@ -849,13 +918,15 @@ export default function Bench(p: Props) {
             const potential = p.result.potential[s.id],
               connected = counts[s.id] > 0,
               selected = p.pending === s.id || hover === s.id,
-              unsupported = UNSUPPORTED_TERMINALS.has(s.id);
+              liveRail = p.powered && !p.result.fault ? RAIL_COLORS[potential] : undefined;
             return (
               <g
                 key={s.id}
                 role="button"
                 tabIndex={0}
-                aria-label={t('bench.terminalLabel', { id: s.id })}
+                aria-label={`${t('bench.terminalLabel', { id: s.id })}, ${t('bench.potential', {
+                  value: potential === 'floating' ? t('bench.floating') : potential,
+                })}`}
                 className={`socket ${selected ? 'active' : ''}`}
                 onPointerDown={(e) => {
                   if (e.button === 0 && p.mode === 'wire' && !space) e.stopPropagation();
@@ -904,14 +975,23 @@ export default function Bench(p: Props) {
                     pointerEvents="none"
                   />
                 )}
+                {/* A live rail fills the ring as well as its outline, so an
+                    energized phase stays readable at the fitted bench zoom. */}
                 <circle
                   className="socket-ring"
                   cx={s.x}
                   cy={s.y}
                   r="6.2"
-                  fill={selected ? '#d5f1e5' : '#697e70'}
-                  stroke={selected ? '#127659' : '#a7b5ab'}
-                  strokeWidth={selected ? 2.5 : 1}
+                  fill={selected ? 'var(--socket-selected)' : (liveRail ?? 'var(--socket-idle)')}
+                  stroke={
+                    selected
+                      ? 'var(--socket-selected-stroke)'
+                      : liveRail
+                        ? 'var(--socket-live-stroke)'
+                        : 'var(--socket-idle-stroke)'
+                  }
+                  strokeWidth={selected ? 2.5 : liveRail ? 1.4 : 1}
+                  opacity={selected ? 1 : liveRail ? 0.92 : 1}
                 />
                 <circle
                   cx={s.x}
@@ -919,18 +999,19 @@ export default function Bench(p: Props) {
                   r="3.7"
                   fill={
                     selected
-                      ? '#16785c'
-                      : p.powered && potential === 'L'
-                        ? '#dea947'
+                      ? 'var(--socket-selected-core)'
+                      : liveRail
+                        ? liveRail
                         : connected
-                          ? '#cedccc'
-                          : '#233c31'
+                          ? 'var(--socket-connected-core)'
+                          : 'var(--socket-idle-core)'
                   }
                 />
-                {connected && <circle cx={s.x} cy={s.y} r="1.5" fill="#e6ede2" />}
+                {connected && (
+                  <circle cx={s.x} cy={s.y} r="1.5" fill="var(--socket-center-highlight)" />
+                )}
                 <title>
                   {s.id}
-                  {unsupported ? t('bench.reservedSuffix') : ''}
                   {counts[s.id] ? t('bench.wireCountSuffix', { count: counts[s.id] }) : ''}
                 </title>
               </g>
@@ -995,18 +1076,16 @@ export default function Bench(p: Props) {
           <Cable size={13} />
           <strong>{hover.replace(':', ' · ')}</strong>
           <span>
-            {UNSUPPORTED_TERMINALS.has(hover)
-              ? t('bench.reserved')
-              : p.powered
-                ? t('bench.potential', {
-                    value:
-                      p.result.potential[hover] === 'floating'
-                        ? t('bench.floating')
-                        : p.result.potential[hover],
-                  })
-                : p.pending
-                  ? t('bench.connect')
-                  : t('bench.startWire')}
+            {p.powered
+              ? t('bench.potential', {
+                  value:
+                    p.result.potential[hover] === 'floating'
+                      ? t('bench.floating')
+                      : p.result.potential[hover],
+                })
+              : p.pending
+                ? t('bench.connect')
+                : t('bench.startWire')}
           </span>
         </div>
       )}

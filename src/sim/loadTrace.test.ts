@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { simulate } from './engine';
 import { EXAMPLES } from './examples';
-import { traceLoad } from './loadTrace';
+import { hasSupplyPath, preferredLoadId, traceLoad } from './loadTrace';
 import { TERMINAL_IDS, type Wire } from './model';
 
 const connect = (...pairs: [string, string][]): Wire[] =>
@@ -9,14 +9,22 @@ const connect = (...pairs: [string, string][]): Wire[] =>
 const example = (id: string) => EXAMPLES.find((item) => item.id === id)!.wires;
 
 describe('stable load connectivity explanations', () => {
+  it('uses one supply-path predicate for running and partial device states', () => {
+    expect(hasSupplyPath('energized')).toBe(true);
+    expect(hasSupplyPath('partial')).toBe(true);
+    expect(hasSupplyPath('energized-not-running')).toBe(true);
+    expect(hasSupplyPath('unconnected')).toBe(false);
+    expect(hasSupplyPath('fault')).toBe(false);
+  });
+
   it('shows both lamp supply and return while pressed, then clears evidence on release', () => {
     const wires = example('button-lamp');
     const pressed = simulate(wires, { SB2: true }, true);
     const trace = traceLoad(wires, pressed, true, 'HL2');
     expect(trace.status).toBe('energized');
     expect(trace.ends).toEqual([
-      { terminalId: 'HL2:1', potential: 'L' },
-      { terminalId: 'HL2:2', potential: 'N' },
+      { terminalId: 'HL2:1', potential: 'L', connection: 'rail' },
+      { terminalId: 'HL2:2', potential: 'N', connection: 'rail' },
     ]);
     expect(trace.wireIds).toEqual(['lamp-1', 'lamp-2', 'lamp-3']);
     expect(trace.contactIds).toEqual(['SB2:NO3-NO4']);
@@ -201,5 +209,217 @@ describe('stable load connectivity explanations', () => {
     const trace = traceLoad(wires, simulate(wires, {}, true), true, 'HL1');
     expect(trace.status).toBe('energized');
     expect(trace.wireIds).toEqual(wires.map((wire) => wire.id).sort());
+  });
+});
+
+describe('motor observation', () => {
+  const motorExample = () => example('motor-self-hold');
+
+  it('identifies the wired star point while the main contactor is open', () => {
+    const wires = motorExample();
+    const state = simulate(wires, {}, true);
+    const trace = traceLoad(wires, state, true, 'MOTOR');
+    expect(state.coils.KM1).toBe(false);
+    expect(
+      trace.ends.filter((end) => end.connection === 'star-point').map((end) => end.terminalId),
+    ).toEqual(['MOTOR:U2', 'MOTOR:V2', 'MOTOR:W2']);
+    expect(trace.status).toBe('unconnected');
+  });
+
+  it('keeps structural star-point labels while power is off without showing a supply path', () => {
+    const wires = motorExample();
+    const state = simulate(wires, {}, false);
+    const trace = traceLoad(wires, state, false, 'MOTOR');
+    expect(trace.status).toBe('unpowered');
+    expect(
+      trace.ends.filter((end) => end.connection === 'star-point').map((end) => end.terminalId),
+    ).toEqual(['MOTOR:U2', 'MOTOR:V2', 'MOTOR:W2']);
+    expect(trace.wireIds).toEqual([]);
+  });
+
+  it('explains all three winding paths when the model classifies the motor as running', () => {
+    const wires = motorExample();
+    const running = simulate(wires, { SB2: true }, true);
+    expect(running.motors.MOTOR).toBe(true);
+    const trace = traceLoad(wires, running, true, 'MOTOR');
+    expect(trace.multiWinding).toBe(true);
+    expect(trace.status).toBe('energized');
+    expect(trace.ends.map((end) => end.terminalId)).toEqual([
+      'MOTOR:U1',
+      'MOTOR:U2',
+      'MOTOR:V1',
+      'MOTOR:V2',
+      'MOTOR:W1',
+      'MOTOR:W2',
+    ]);
+    // Each phase conductor and each winding terminal must be explained.
+    expect(trace.terminalIds).toEqual(
+      expect.arrayContaining([
+        'MOTOR:U1',
+        'MOTOR:V1',
+        'MOTOR:W1',
+        'MOTOR:U2',
+        'MOTOR:V2',
+        'MOTOR:W2',
+      ]),
+    );
+    expect(trace.windings.map(({ phase, supplied }) => [phase, supplied])).toEqual([
+      ['U', true],
+      ['V', true],
+      ['W', true],
+    ]);
+    expect(trace.ends.filter((end) => end.connection === 'star-point')).toHaveLength(3);
+    expect(trace.wireIds).toEqual(expect.arrayContaining(['motor-13', 'motor-14']));
+    expect(trace.contactIds).toEqual(
+      expect.arrayContaining(['KM1:L1-T1', 'KM1:L2-T2', 'KM1:L3-T3']),
+    );
+    expect(trace.wireIds.length).toBeGreaterThan(0);
+  });
+
+  it('reports a missing phase as partial instead of a running motor', () => {
+    const wires = motorExample().filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, { SB2: true }, true);
+    expect(state.motors.MOTOR).toBe(false);
+    const trace = traceLoad(wires, state, true, 'MOTOR');
+    expect(trace.status).toBe('partial');
+    // The live U and V windings are still explained, so the learner sees what works.
+    expect(trace.terminalIds).toEqual(expect.arrayContaining(['MOTOR:U1', 'MOTOR:V1']));
+  });
+
+  it('reports energized windings without claiming a three-phase run condition', () => {
+    const twoPhase = motorExample().map((wire) =>
+      wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:V2' } : wire,
+    );
+    const state = simulate(twoPhase, { SB2: true }, true);
+    expect(state.fault).toBeNull();
+    expect(Object.values(state.windings).every(Boolean)).toBe(true);
+    expect(state.motors.MOTOR).toBe(false);
+
+    const trace = traceLoad(twoPhase, state, true, 'MOTOR');
+    expect(trace.status).toBe('energized-not-running');
+    expect(trace.terminalIds).toEqual(expect.arrayContaining(['MOTOR:U1', 'MOTOR:V1', 'MOTOR:W1']));
+  });
+
+  it('explains a repeated-phase three-winding connection without stopping its control circuit', () => {
+    const wires = connect(
+      ['POWER:U2', 'MOTOR:U1'],
+      ['MOTOR:U2', 'POWER:V2'],
+      ['POWER:U2', 'MOTOR:V1'],
+      ['MOTOR:V2', 'POWER:V2'],
+      ['POWER:V2', 'MOTOR:W1'],
+      ['MOTOR:W2', 'POWER:W2'],
+      ['POWER:L', 'KM1:A1'],
+      ['KM1:A2', 'POWER:N'],
+    );
+    const state = simulate(wires, {}, true);
+    const trace = traceLoad(wires, state, true, 'MOTOR');
+
+    expect(state.fault).toBeNull();
+    expect(state.coils.KM1).toBe(true);
+    expect(trace.status).toBe('energized-not-running');
+    expect(trace.motorProblem).toBe('no-pattern');
+  });
+
+  it('reports an undefined supply relationship instead of labeling it same-phase', () => {
+    const wires = connect(['POWER:U2', 'MOTOR:U1'], ['POWER:N', 'MOTOR:U2']);
+    const state = simulate(wires, {}, true);
+    const trace = traceLoad(wires, state, true, 'MOTOR');
+
+    expect(state.fault).toBeNull();
+    expect(trace.status).toBe('unconnected');
+    expect(trace.motorProblem).toBe('undefined-supply');
+  });
+
+  it('keeps an undefined neutral reference local and does not claim winding supply', () => {
+    const wires = connect(
+      ['POWER:L', 'KM1:A1'],
+      ['KM1:A2', 'POWER:N'],
+      ['POWER:U2', 'MOTOR:U1'],
+      ['POWER:V2', 'MOTOR:V1'],
+      ['POWER:W2', 'MOTOR:W1'],
+      ['MOTOR:U2', 'MOTOR:V2'],
+      ['MOTOR:V2', 'MOTOR:W2'],
+      ['MOTOR:W2', 'POWER:N'],
+    );
+    const state = simulate(wires, {}, true);
+    const trace = traceLoad(wires, state, true, 'MOTOR');
+
+    expect(state.fault).toBeNull();
+    expect(state.coils.KM1).toBe(true);
+    expect(trace.status).toBe('unconnected');
+    expect(trace.motorProblem).toBe('undefined-star-rail');
+    expect(trace.windings.every(({ supplied }) => !supplied)).toBe(true);
+  });
+
+  it('does not report same-phase star windings as energized', () => {
+    const samePhase = motorExample().map((wire) =>
+      wire.from === 'POWER:V2' || wire.from === 'POWER:W2' ? { ...wire, from: 'POWER:U2' } : wire,
+    );
+    const state = simulate(samePhase, { SB2: true }, true);
+
+    expect(Object.values(state.windings).every(Boolean)).toBe(false);
+    expect(state.motors.MOTOR).toBe(false);
+    const trace = traceLoad(samePhase, state, true, 'MOTOR');
+    expect(trace.status).toBe('unconnected');
+    expect(trace.motorProblem).toBe('same-phase');
+  });
+
+  it('does not claim a trace for a stopped motor with no phase supply', () => {
+    const wires = motorExample();
+    const stopped = simulate(wires, {}, true);
+    expect(stopped.motors.MOTOR).toBe(false);
+    expect(traceLoad(wires, stopped, true, 'MOTOR').status).toBe('unconnected');
+  });
+});
+
+describe('default observation target', () => {
+  it('opens a motor example on the motor rather than on its contactor coil', () => {
+    expect(preferredLoadId(example('motor-self-hold'), 'KM1')).toBe('MOTOR');
+  });
+
+  it('keeps the existing examples on the load they are about', () => {
+    expect(preferredLoadId(example('button-lamp'), 'KM1')).toBe('HL2');
+    expect(preferredLoadId(example('contactor-jog'), 'KM1')).toBe('KM1');
+    expect(preferredLoadId(example('self-hold'), 'KM1')).toBe('KM1');
+  });
+
+  it('falls back to the first observable load when nothing is wired yet', () => {
+    expect(preferredLoadId([], null)).toBe('KM1');
+    expect(preferredLoadId([], 'MOTOR')).toBe('MOTOR');
+  });
+
+  it('honours a preferred load that is tied for the most connections', () => {
+    // Both HL1 and HL2 are fully wired here, so the learner's own choice stays.
+    const wires = connect(
+      ['POWER:L', 'HL1:1'],
+      ['HL1:2', 'POWER:N'],
+      ['POWER:L', 'HL2:1'],
+      ['HL2:2', 'POWER:N'],
+    );
+    expect(preferredLoadId(wires, 'HL2')).toBe('HL2');
+    expect(preferredLoadId(wires, 'HL1')).toBe('HL1');
+  });
+
+  it('does not let a partly wired motor outrank a complete lamp by terminal count', () => {
+    const wires = connect(
+      ['POWER:U2', 'MOTOR:U1'],
+      ['POWER:V2', 'MOTOR:V1'],
+      ['POWER:W2', 'MOTOR:W1'],
+      ['POWER:L', 'HL2:1'],
+      ['HL2:2', 'POWER:N'],
+    );
+    expect(preferredLoadId(wires, 'MOTOR')).toBe('HL2');
+  });
+});
+
+describe('partial motor copy', () => {
+  it('reports a missing phase as partial, with strings in both languages', () => {
+    const wires = example('motor-self-hold').filter(
+      (wire) => wire.from !== 'POWER:W2' && wire.to !== 'POWER:W2',
+    );
+    const state = simulate(wires, { SB2: true }, true);
+    expect(traceLoad(wires, state, true, 'MOTOR').status).toBe('partial');
   });
 });

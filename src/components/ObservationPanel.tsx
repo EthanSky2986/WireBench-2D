@@ -2,7 +2,8 @@ import { useId } from 'react';
 import { ChevronLeft, ChevronRight, ScanLine } from 'lucide-react';
 import { useI18n, type Translate } from '../i18n';
 import { localizeFault } from '../i18n/messages';
-import { DEVICE_MAP, LOADS, type Wire } from '../sim/model';
+import { DEVICE_MAP, OBSERVABLE_LOADS, type Wire } from '../sim/model';
+import { hasSupplyPath } from '../sim/loadTrace';
 import type { LoadTrace } from '../sim/loadTrace';
 import {
   diffSimulationStates,
@@ -125,6 +126,9 @@ export default function ObservationPanel({
     ...difference.lamps.map((change) =>
       t(change.to ? 'learning.lampOn' : 'learning.lampOff', { id: change.id }),
     ),
+    ...difference.motors.map((change) =>
+      t(change.to ? 'learning.motorOn' : 'learning.motorOff', { id: change.id }),
+    ),
     ...(difference.closedContacts.length
       ? [t('learning.closed', { contacts: difference.closedContacts.join(', ') })]
       : []),
@@ -144,7 +148,8 @@ export default function ObservationPanel({
     : [];
   const traceChanged =
     wiresAdded.length + wiresRemoved.length + contactsAdded.length + contactsRemoved.length > 0;
-  const keptOn = trace.status === 'energized' && comparableTrace?.status === 'energized';
+  const keptOn =
+    hasSupplyPath(trace.status) && !!comparableTrace && hasSupplyPath(comparableTrace.status);
 
   return (
     <section className="observation-panel" aria-label={t('learning.inspect')}>
@@ -205,9 +210,16 @@ export default function ObservationPanel({
           value={trace.loadId}
           onChange={(event) => onLoadChange(event.target.value)}
         >
-          {LOADS.map((load) => (
+          {OBSERVABLE_LOADS.map((load) => (
             <option key={load.deviceId} value={load.deviceId}>
-              {load.deviceId} · {t(load.kind === 'coil' ? 'learning.coil' : 'learning.lamp')}
+              {load.deviceId} ·{' '}
+              {t(
+                load.kind === 'coil'
+                  ? 'learning.coil'
+                  : load.kind === 'lamp'
+                    ? 'learning.lamp'
+                    : 'learning.motor',
+              )}
             </option>
           ))}
         </select>
@@ -227,12 +239,36 @@ export default function ObservationPanel({
             {trace.ends.map((end) => (
               <div key={end.terminalId}>
                 <code>{end.terminalId}</code>
-                <span>{end.potential === 'floating' ? t('learning.floating') : end.potential}</span>
+                <span>
+                  {end.connection === 'star-point'
+                    ? t('learning.starPoint')
+                    : end.potential === 'floating'
+                      ? t('learning.floating')
+                      : end.potential}
+                </span>
               </div>
             ))}
           </div>
         )}
-        {trace.status === 'energized' ? (
+        {trace.multiWinding &&
+          trace.status !== 'fault' &&
+          trace.motorProblem !== 'undefined-supply' &&
+          trace.motorProblem !== 'undefined-star-rail' && (
+            <div className="observation-windings">
+              <h3>{t('learning.windingStatus')}</h3>
+              {trace.windings.map((winding) => (
+                <div key={winding.id}>
+                  <code>{winding.phase}</code>
+                  <span>
+                    {t(
+                      winding.supplied ? 'learning.windingSupplied' : 'learning.windingNotSupplied',
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        {hasSupplyPath(trace.status) ? (
           <>
             <p>
               {t('learning.traceCount', {
@@ -241,23 +277,29 @@ export default function ObservationPanel({
               })}
             </p>
             {keptOn && <p>{t('learning.keptOn', { id: trace.loadId })}</p>}
+            {trace.status === 'partial' && <p>{t('learning.partialHint')}</p>}
+            {trace.motorProblem && trace.motorProblem !== 'ok' && (
+              <p className="observation-hint">{t(`learning.motorProblem.${trace.motorProblem}`)}</p>
+            )}
           </>
         ) : (
           <p>
-            {t(
-              trace.status === 'unpowered'
-                ? 'learning.unpoweredHint'
-                : trace.status === 'fault'
-                  ? 'learning.faultHint'
-                  : trace.status === 'same-rail'
-                    ? 'learning.sameRailHint'
-                    : 'learning.unconnectedHint',
-            )}
+            {trace.motorProblem && trace.motorProblem !== 'ok'
+              ? t(`learning.motorProblem.${trace.motorProblem}`)
+              : t(
+                  trace.status === 'unpowered'
+                    ? 'learning.unpoweredHint'
+                    : trace.status === 'fault'
+                      ? 'learning.faultHint'
+                      : trace.status === 'same-rail'
+                        ? 'learning.sameRailHint'
+                        : 'learning.unconnectedHint',
+                )}
           </p>
         )}
         {displayed.result.fault && <p>{localizeFault(displayed.result.fault, locale)}</p>}
       </div>
-      {trace.status === 'energized' && (
+      {hasSupplyPath(trace.status) && (
         <div className="observation-path">
           <h3>{t('learning.pathContacts')}</h3>
           {trace.contactIds.length ? (

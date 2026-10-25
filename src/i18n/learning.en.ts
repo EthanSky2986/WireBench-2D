@@ -38,21 +38,44 @@ export const en = {
   'learning.releaseMode': 'Operation mode changed · buttons released',
   'learning.load': 'Observe load',
   'learning.coil': 'coil',
+  'learning.motor': 'motor',
   'learning.lamp': 'indicator lamp',
   'learning.showTrace': 'Show supply paths',
-  'learning.status.energized': 'Energized: the ends connect to L and N',
+  'learning.status.energized': 'Energized: a complete supply path is connected',
+  'learning.status.energized-not-running':
+    'All three windings have a modeled supply path, but the three-phase run criteria are not met',
   'learning.status.unpowered': 'Power is off',
   'learning.status.fault': 'Stopped by fault · no supply trace',
   'learning.status.unconnected': 'No complete supply path',
+  'learning.status.partial':
+    'Only some windings have modeled supply paths; the three-phase run criteria are not met',
   'learning.status.same-rail': 'Both ends connect to the same rail',
-  'learning.floating': 'Not connected to L/N',
+  'learning.floating': 'Not on a supply rail',
+  'learning.starPoint': 'Star point (shared winding node)',
+  'learning.windingStatus': 'Winding supply checks',
+  'learning.windingSupplied': 'Modeled supply path found',
+  'learning.windingNotSupplied': 'No modeled supply path found',
+  'learning.motorProblem.missing-phase':
+    'A phase is missing, or a winding has no complete supply path.',
+  'learning.motorProblem.same-phase':
+    'The windings connect only to one phase; no phase-to-phase supply relation is formed.',
+  'learning.motorProblem.open-winding':
+    'The winding terminals do not form a recognized Y or delta connection.',
+  'learning.motorProblem.no-pattern':
+    'The winding-terminal topology does not match a supported Y or delta connection.',
+  'learning.motorProblem.undefined-supply':
+    'The winding is connected between supply rails with an undefined relationship, so its supply state cannot be determined.',
+  'learning.motorProblem.undefined-star-rail':
+    'The supply relationship for the rail connected to the star point is undefined.',
   'learning.unpoweredHint': 'Turn on the power to inspect the supply connections in this wiring.',
   'learning.unconnectedHint':
-    'At least one end is not connected to a supply rail. Check the wiring and contact states.',
+    'At least one end is not connected to a supply rail, or a complete circuit is not formed. Check the wiring and contact states.',
+  'learning.partialHint':
+    'The model indicates a run condition when all three windings have supply paths and phases U, V and W are present. It does not model whether a real motor keeps turning during phase loss, nor speed, torque or thermal protection. The star point may be on either side of the windings. Windings with modeled supply paths are highlighted below; check a missing phase, the KM main contacts, or the star-point wiring.',
   'learning.sameRailHint':
-    'The load needs one connection to L and one to N. Two L connections or two N connections do not energize it.',
+    'The load needs its two ends on different supply rails. Two ends on the same rail do not energize it.',
   'learning.faultHint':
-    'Devices show the stopped state. Fault markers preserve evidence from when the fault occurred; they are not the present supply paths.',
+    'Devices show the model state after a fault stop. Fault markers preserve evidence from when the fault occurred; they are not the present supply paths.',
   'learning.traceHint':
     'Highlights this load’s supply and return paths, including conductive parallel branches. This is not measured current or a unique route.',
   'learning.traceCount': '{wires} wires · {contacts} closed contacts',
@@ -67,11 +90,13 @@ export const en = {
   'learning.coilOff': '{id} coil de-energized',
   'learning.lampOn': '{id} lit',
   'learning.lampOff': '{id} went out',
+  'learning.motorOn': '{id} meets the three-phase run criteria',
+  'learning.motorOff': '{id} no longer meets the three-phase run criteria',
   'learning.closed': 'Closed: {contacts}',
   'learning.opened': 'Opened: {contacts}',
   'learning.faultChanged': 'The fault state changed.',
   'learning.keptOn':
-    '{id} was energized before and after this step. The paths below show the connections to L/N that remain after the action.',
+    '{id} was energized before and after this step. The paths below show the supply-rail connections that remain after the action.',
   'learning.pathChanges': 'Supply path changes',
   'learning.wiresAdded': 'Wires entering the paths ({count})',
   'learning.wiresRemoved': 'Wires leaving the paths ({count})',
