@@ -42,6 +42,19 @@ try {
   if ($page.StatusCode -ne 200 -or $page.Content -notmatch 'WireBench') {
     throw 'Launcher did not serve the embedded application.'
   }
+
+  $assetPaths = [regex]::Matches($page.Content, '(?:src|href)="([^"]+\.(?:js|css))"') |
+    ForEach-Object { $_.Groups[1].Value } |
+    Select-Object -Unique
+  if ($assetPaths.Count -lt 2) {
+    throw 'Launcher page did not reference both JavaScript and CSS assets.'
+  }
+  foreach ($assetPath in $assetPaths) {
+    $asset = Invoke-WebRequest -UseBasicParsing -Uri ([System.Uri]::new($rootUri, $assetPath))
+    if ($asset.StatusCode -ne 200 -or [string]::IsNullOrWhiteSpace($asset.Content)) {
+      throw "Launcher did not serve asset: $assetPath"
+    }
+  }
 } finally {
   if (-not $process.HasExited) {
     Stop-Process -Id $process.Id -Force
