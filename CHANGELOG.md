@@ -1,5 +1,11 @@
 # Changelog / 变更记录
 
+## v3.1.0 — 2026-10-27
+
+- 修复接线预览虚线把接触器、热继电器和电机内部实体接线螺钉当作用户拐点的错误。接线时这些固定端子位置会拦截预览与路由点击；端子排连接和非接线状态不受影响。
+
+English: Prevented wire previews and routing clicks from treating internal contactor, thermal-relay, and motor terminal screws as user waypoints. Terminal-strip wiring and other interaction modes are unchanged.
+
 ## v0.3.0 — 2026-10-25
 
 ### Added / 新增

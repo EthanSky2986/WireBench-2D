@@ -709,6 +709,9 @@ p {
 .bench-svg.is-wiring:not(.is-pan) .wire-hit {
   cursor: crosshair;
 }
+.bench-svg.is-wiring:not(.is-pan) .wire-blocking-terminal {
+  cursor: not-allowed;
+}
 .canvas-label {
   position: absolute;
   z-index: 1;

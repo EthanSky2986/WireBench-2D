@@ -45,11 +45,13 @@ function Screw({
   y,
   radius = 4,
   metal,
+  blockWireTarget = false,
 }: {
   x: number;
   y: number;
   radius?: number;
   metal: string;
+  blockWireTarget?: boolean;
 }) {
   return (
     <g transform={`translate(${x} ${y})`}>
@@ -67,6 +69,15 @@ function Screw({
         strokeWidth="0.35"
         opacity="0.8"
       />
+      {blockWireTarget && (
+        <circle
+          className="wire-blocking-terminal"
+          data-wire-block="terminal"
+          r={Math.max(radius + 4, 9)}
+          fill="transparent"
+          pointerEvents="all"
+        />
+      )}
     </g>
   );
 }
@@ -75,7 +86,14 @@ function Screw({
  * The enclosing device owns interaction, accessible labels and electrical state.
  */
 export function RefinedDeviceArt(props: DeviceArtProps) {
-  const { kind, id, active = false, tripped = false, panelMounted = false } = props;
+  const {
+    kind,
+    id,
+    active = false,
+    tripped = false,
+    panelMounted = false,
+    blockWireTerminals = false,
+  } = props;
   const { locale, t } = useI18n();
   const uid = `refined-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const fill = (name: string) => `url(#${uid}-${name})`;
@@ -206,7 +224,13 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
                 stroke="#111c21"
                 strokeWidth="1"
               />
-              <Screw x={x} y={28} radius={5} metal={fill('metal')} />
+              <Screw
+                x={x}
+                y={28}
+                radius={5}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
               <text x={x} y="12" textAnchor="middle" className="refined-silkscreen">
                 {['1 L1', '3 L2', '5 L3', '13 NO'][index]}
               </text>
@@ -220,7 +244,13 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
                 stroke="#6b767c"
                 strokeWidth="0.6"
               />
-              <Screw x={x} y={133} radius={4.4} metal={fill('metal')} />
+              <Screw
+                x={x}
+                y={133}
+                radius={4.4}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
               <text x={x} y="150" textAnchor="middle" className="refined-silkscreen">
                 {['2 T1', '4 T2', '6 T3', '14 NO'][index]}
               </text>
@@ -248,8 +278,20 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
 
           {[108, 124].map((x, index) => (
             <g key={`no-${x}`}>
-              <Screw x={x} y={62} radius={3.4} metal={fill('metal')} />
-              <Screw x={x} y={100} radius={3.4} metal={fill('metal')} />
+              <Screw
+                x={x}
+                y={62}
+                radius={3.4}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
+              <Screw
+                x={x}
+                y={100}
+                radius={3.4}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
               <text x={x} y="55" textAnchor="middle" className="refined-contact-number">
                 {['53', '83'][index]}
               </text>
@@ -262,8 +304,20 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
           {/* Main auxiliary contacts on the left of the front, clear of the coil window. */}
           {[31, 84].map((x, index) => (
             <g key={`aux-${x}`}>
-              <Screw x={x} y={62} radius={3.4} metal={fill('metal')} />
-              <Screw x={x} y={100} radius={3.4} metal={fill('metal')} />
+              <Screw
+                x={x}
+                y={62}
+                radius={3.4}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
+              <Screw
+                x={x}
+                y={100}
+                radius={3.4}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
               <text x={x} y="55" textAnchor="middle" className="refined-contact-number">
                 {['61', '71'][index]}
               </text>
@@ -349,9 +403,21 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
                 textAnchor="middle"
                 className="refined-silkscreen"
               >{`L${i + 1}`}</text>
-              <Screw x={x} y={33} radius={4.5} metal={fill('metal')} />
+              <Screw
+                x={x}
+                y={33}
+                radius={4.5}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
               <rect x={x - 12} y="124" width="24" height="20" rx="2" fill="#202a30" />
-              <Screw x={x} y={134} radius={4.5} metal={fill('metal')} />
+              <Screw
+                x={x}
+                y={134}
+                radius={4.5}
+                metal={fill('metal')}
+                blockWireTarget={blockWireTerminals}
+              />
               <text
                 x={x}
                 y="154"
@@ -665,6 +731,17 @@ export function RefinedDeviceArt(props: DeviceArtProps) {
               <g key={label}>
                 <circle cx={x} cy={y} r="2.15" fill="#161f23" stroke="#8b989d" strokeWidth="0.6" />
                 <circle cx={x} cy={y} r="0.8" fill="#c1c9cc" opacity="0.9" />
+                {blockWireTerminals && (
+                  <circle
+                    className="wire-blocking-terminal"
+                    data-wire-block="terminal"
+                    cx={x}
+                    cy={y}
+                    r="5"
+                    fill="transparent"
+                    pointerEvents="all"
+                  />
+                )}
                 <text
                   x={x}
                   y={Number(y) + 5.4}

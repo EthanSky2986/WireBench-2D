@@ -293,6 +293,8 @@ export default function Bench(p: Props) {
     const r = host.current!.getBoundingClientRect();
     return { x: (e.clientX - r.left - view.x) / view.z, y: (e.clientY - r.top - view.y) / view.z };
   };
+  const isWireBlockedTarget = (target: EventTarget | null) =>
+    target instanceof Element && target.closest('[data-wire-block="terminal"]') !== null;
   const zoom = (factor: number) => {
     autoFit.current = false;
     setView((v) => zoomView(v, size, factor));
@@ -307,6 +309,10 @@ export default function Bench(p: Props) {
       return;
     }
     if (p.pending && !p.powered && !p.readOnly) {
+      if (isWireBlockedTarget(e.target)) {
+        setCursor(null);
+        return;
+      }
       p.onRoute(clampPoint(world(e)));
     } else {
       setOverlap(null);
@@ -314,6 +320,17 @@ export default function Bench(p: Props) {
     }
   };
   const pointerMove = (e: ReactPointerEvent<SVGSVGElement>) => {
+    if (
+      p.pending &&
+      !p.powered &&
+      !p.readOnly &&
+      p.mode === 'wire' &&
+      !space &&
+      isWireBlockedTarget(e.target)
+    ) {
+      setCursor(null);
+      return;
+    }
     const point = world(e);
     setCursor(point);
     const d = drag.current;
@@ -685,6 +702,9 @@ export default function Bench(p: Props) {
                     active={active}
                     tripped={!!p.inputs[d.id]}
                     panelMounted={d.kind === 'lamp'}
+                    blockWireTerminals={
+                      !!p.pending && !p.powered && !p.readOnly && p.mode === 'wire' && !space
+                    }
                   />
                   {d.kind === 'thermal' && (
                     <g

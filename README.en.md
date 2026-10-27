@@ -4,7 +4,7 @@
 
 A two-dimensional electrical training bench in your browser. Device leads are already connected to terminal strips. Draw wires between terminals, operate buttons and switches, and watch contactors and indicator lamps respond to the circuit you build.
 
-**Teaching release 0.3.0: [v0.3.0](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.3.0) (2026-10-25).** Code uses the MIT license; the public repository excludes original reference images. The model supports basic control-circuit practice and three-phase motor wiring topology; it does not calculate physical voltage, current, or motor motion.
+**Teaching release 3.1.0: [v3.1.0](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v3.1.0) (2026-10-27).** Code uses the MIT license; the public repository excludes original reference images. The model supports basic control-circuit practice and three-phase motor wiring topology; it does not calculate physical voltage, current, or motor motion.
 
 ![0.3.0 workbench: self-holding contactor and three-phase motor running, light theme](docs/screenshots/wirebench-0.3.0-motor-running.png)
 
@@ -23,9 +23,9 @@ No account or backend is required. Installing dependencies needs internet access
 
 ## Run locally
 
-Download and extract the source from the [v0.3.0 release page](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v0.3.0), or clone the repository. The application is available for local use after download; there is no hosted online demo.
+Download and extract the source from the [v3.1.0 release page](https://github.com/EthanSky2986/WireBench-2D/releases/tag/v3.1.0), or clone the repository. The application is available for local use after download; there is no hosted online demo.
 
-Windows x64 users can download `WireBench-0.3.0-win-x64.exe` from the release page. Double-clicking it starts a local server and opens the default browser. The launcher listens only on `127.0.0.1:48173`; close its console window to stop the server. It does not require Node.js and is not an embedded desktop browser. The unsigned Windows file may trigger a SmartScreen warning; obtain it from the GitHub release page.
+Windows x64 users can download `WireBench-3.1.0-win-x64.exe` from the release page. Double-clicking it starts a local server and opens the default browser. The launcher listens only on `127.0.0.1:48173`; close its console window to stop the server. It does not require Node.js and is not an embedded desktop browser. The unsigned Windows file may trigger a SmartScreen warning; obtain it from the GitHub release page.
 
 Install Node.js **22.12+** and npm; Node.js **24 LTS** is recommended. In the project directory:
 
@@ -57,25 +57,25 @@ History is read-only. Choose **Return to live run** before operating again. Leav
 
 ## Controls
 
-| Action                     | How                                                                                                                                                              |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Draw a wire                | With power off, click the starting and destination terminals; click empty space, an existing wire, or a device body along the way to add bends                   |
-| Cancel a pending wire      | Press Esc or use the cancel control                                                                                                                              |
-| Adjust routing             | Select a wire and drag its circular bend handles; **Reroute wire** replans that wire and can be undone                                                           |
-| Arrange older routes       | **Arrange automatic wires** in the toolbar arranges only wires without a saved route; existing bends stay unchanged. Undo is available                           |
-| Identify overlapping wires | Click the same position repeatedly or select **Next wire**; the selected wire moves visually to the front and marks its endpoints while other ordinary wires dim |
-| Change color / delete      | Select a wire and use the inspector; Delete also removes it                                                                                                      |
-| Undo / redo                | Toolbar, ⌘/Ctrl+Z, or ⌘/Ctrl+Shift+Z                                                                                                                             |
-| Zoom / pan                 | Scroll to zoom; hold Space and drag, use the middle mouse button, or select the pan tool; **Fit bench to view** restores automatic fitting                       |
-| Momentary pushbutton       | Hold to activate and release to reset; focused buttons also support Space/Enter                                                                                  |
-| SQ, emergency stop         | Click to activate, click again to reset                                                                                                                          |
-| FR overload relay          | Body opens details; TEST trips, RESET resets. Current adjustment is not simulated.                                                                               |
-| Reset operating state      | **Reset → Reset operating state** beside power; powers off and resets inputs and faults, retaining wiring and wiring undo history                                |
-| Clear wiring               | **Reset → Clear all wiring**, then confirm; keeps the name and current exercise and can be undone                                                                |
-| Exit an example            | Select **Exit experiment**, click the selected example again, or choose **My workspace**                                                                         |
-| Save / import / export     | Your own workspace autosaves; export from the toolbar or import a `.wirebench.json` file with power off                                                          |
-| Language / theme           | EN switches to English; 中 switches to Chinese; the appearance icon switches theme directly; both move to the toolbar in full screen                             |
-| Full screen / navigation   | Enter full screen from the toolbar; Esc or the exit control restores it; navigation and its groups can collapse independently                                    |
+| Action                     | How                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Draw a wire                | With power off, click the starting and destination terminals; click empty space, an existing wire, or the device housing to add bends. Internal terminal screws are not bend targets |
+| Cancel a pending wire      | Press Esc or use the cancel control                                                                                                                                                  |
+| Adjust routing             | Select a wire and drag its circular bend handles; **Reroute wire** replans that wire and can be undone                                                                               |
+| Arrange older routes       | **Arrange automatic wires** in the toolbar arranges only wires without a saved route; existing bends stay unchanged. Undo is available                                               |
+| Identify overlapping wires | Click the same position repeatedly or select **Next wire**; the selected wire moves visually to the front and marks its endpoints while other ordinary wires dim                     |
+| Change color / delete      | Select a wire and use the inspector; Delete also removes it                                                                                                                          |
+| Undo / redo                | Toolbar, ⌘/Ctrl+Z, or ⌘/Ctrl+Shift+Z                                                                                                                                                 |
+| Zoom / pan                 | Scroll to zoom; hold Space and drag, use the middle mouse button, or select the pan tool; **Fit bench to view** restores automatic fitting                                           |
+| Momentary pushbutton       | Hold to activate and release to reset; focused buttons also support Space/Enter                                                                                                      |
+| SQ, emergency stop         | Click to activate, click again to reset                                                                                                                                              |
+| FR overload relay          | Body opens details; TEST trips, RESET resets. Current adjustment is not simulated.                                                                                                   |
+| Reset operating state      | **Reset → Reset operating state** beside power; powers off and resets inputs and faults, retaining wiring and wiring undo history                                                    |
+| Clear wiring               | **Reset → Clear all wiring**, then confirm; keeps the name and current exercise and can be undone                                                                                    |
+| Exit an example            | Select **Exit experiment**, click the selected example again, or choose **My workspace**                                                                                             |
+| Save / import / export     | Your own workspace autosaves; export from the toolbar or import a `.wirebench.json` file with power off                                                                              |
+| Language / theme           | EN switches to English; 中 switches to Chinese; the appearance icon switches theme directly; both move to the toolbar in full screen                                                 |
+| Full screen / navigation   | Enter full screen from the toolbar; Esc or the exit control restores it; navigation and its groups can collapse independently                                                        |
 
 Full screen preserves the circuit and running state. Open the inspector from its toolbar to view contacts, change wire colors, reroute, or delete wires; wiring edits remain locked while powered. If native full screen is unavailable, the bench fills the page and displays a notice. The selected wire stays continuously visible while only its outer halo pulses; the system's reduced-motion preference disables that animation.
 
@@ -126,7 +126,7 @@ Detailed architecture and development documents are currently in Chinese. The co
 
 ## Repository and licensing status
 
-The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v0.3.0` teaching release. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
+The [GitHub repository](https://github.com/EthanSky2986/WireBench-2D) is open source as the `v3.1.0` teaching release. Project code and original documentation use the [MIT license](LICENSE). User-supplied photographs, sketches, product images, and their copies are excluded. README screenshots show the application itself; the terminal-layout reference is generated from code. See [third-party and reference-material notices](THIRD_PARTY_NOTICES.md) for dependency and material scope.
 
 An independent classroom trial by a teacher or student remains pending. Follow the example steps above and report reproducible feedback; the current scope and limitations are described above.
 
